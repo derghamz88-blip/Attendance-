@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IAT Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#1d2733;--mut:#6b7785;--pri:#0f6cbd;--bd:#dde3ea;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
+header{background:var(--pri);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;flex:1}
+header button{background:#ffffff26;border:0;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer}
+nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+nav button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:14px;color:var(--mut)}
+nav button.on{background:var(--pri);color:#fff}
+main{padding:6px;max-width:none;margin:0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;margin-bottom:8px}
+.card h3{margin:0 0 8px;font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+input,select{font:inherit;padding:7px 8px;border:1px solid var(--bd);border-radius:6px;background:#fff;max-width:100%}
+input[type=color]{padding:0;width:36px;height:30px}
+button.b{background:var(--pri);color:#fff;border:0;padding:8px 14px;border-radius:7px;cursor:pointer;font:inherit}
+button.b.sec{background:#e9eef4;color:var(--tx)}
+button.b.red{background:var(--bad)}
+button.b.grn{background:#2e7d32}
+button.b.sm{padding:3px 9px;font-size:12px}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid var(--bd);padding:5px 7px;text-align:center}
+th{background:#eef2f6;font-weight:600}
+td.l,th.l{text-align:left}
+.tw{overflow-x:auto}
+/* monthly sheet: dates down the left, workers across the top, fits the screen */
+.gw{overflow-x:auto;border:1px solid var(--bd);border-radius:8px}
+table.g{table-layout:fixed;width:100%}
+table.g th,table.g td{padding:1px 0;overflow:hidden;line-height:1.5}
+table.g th.dcol,table.g td.dcol{width:50px;text-align:left;padding:1px 4px;position:sticky;left:0;background:#fff;z-index:2;white-space:nowrap}
+table.g td.dcol.pr{background:#fde7c8}
+table.g td.dcol.ph{background:#e8e1f5}
+table.g th.oc,table.g td.oc{width:20px;background:#f8fafc}
+table.g th.wn{height:104px;vertical-align:bottom;padding:2px 0;background:#eef2f6}
+table.g th.wn span{line-height:1.05;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;max-height:98px;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+table.g tr.tt td{background:#f8fafc;font-weight:700}
+table.g tr.tt td.dcol{background:#eef2f6}
+td.N{background:#fff}
+.wk{display:grid;grid-template-columns:minmax(120px,170px) 1fr minmax(150px,270px) 72px 76px;gap:6px;align-items:center;padding:4px 6px;border:1px solid var(--bd);border-left:6px solid var(--c,#ccc);border-radius:8px;margin-bottom:4px;background:#fff}
+.wk.wkh{border:0;font-weight:600;color:var(--mut);margin-bottom:0}
+.wk input.nm{width:100%;font-weight:600}
+.wk.inact{opacity:.45}
+.rc{border:1px solid var(--bd);border-left:6px solid var(--c);border-radius:8px;padding:6px 8px;margin-bottom:6px}
+.rr{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0}
+.rr label{display:flex;gap:5px;align-items:center;font-size:13px}
+.rr .lb{font-size:12px;color:var(--mut)}
+@media(max-width:820px){.wk{grid-template-columns:1fr 1fr}.wk .ty,.wk .sf{grid-column:1/-1}.wk.wkh{display:none}}
+.dt{border:1px solid var(--bd);background:#fff;border-radius:5px;padding:3px 0;width:25px;font-size:10px;cursor:pointer}
+.dt.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+th.pr{background:#fde7c8!important}
+td.c{cursor:pointer;font-weight:700}
+td.W{background:#e6f6ec;color:#7aa88a}td.L{background:#fff2cc;color:#8a6d00}td.A{background:#fbd5d5;color:#a32020}td.P{background:#fde2cf;color:#a8460b}td.H{background:#d9e8fb;color:#1f5da8}td.F{background:#e8e1f5;color:#5a3d99}
+td.pl{outline:2px dashed #e08a00;outline-offset:-2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+.k{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px;text-align:center}
+.k b{display:block;font-size:22px}
+.k span{color:var(--mut);font-size:12px}
+.warn{background:#fff4e5;border:1px solid #ffd59a;border-radius:8px;padding:8px;margin:6px 0;font-size:13px}
+.bad{background:#fdeaea;border-color:#f3b4b4}
+.good{background:#e8f6ed;border-color:#b5e0c3}
+.tag{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;margin:1px;color:#fff}
+.tag.n{background:#eef2f6;color:var(--tx)}
+.ov{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;z-index:50;padding:10px}
+.md{background:#fff;border-radius:12px;padding:16px;width:480px;max-width:100%;max-height:90vh;overflow:auto}
+.md h3{margin-top:0}
+.fl{display:grid;gap:10px}
+.fl>label{display:grid;gap:4px;font-size:13px;color:var(--mut)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:8px 14px;border:2px solid var(--c,#999);background:#fff;color:var(--c,#555);border-radius:20px;cursor:pointer;font:inherit;font-weight:600}
+.chip.sel{background:var(--c,#555);color:#fff}
+.sh{padding-top:6px;margin:10px 0 4px;font-weight:700;color:var(--mut)}
+.wr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--bd);border-left:6px solid var(--c);border-radius:8px;padding:7px 9px;margin-bottom:5px}
+.wr .nm{flex:1;min-width:140px;font-weight:600}
+.wr .nm small{display:block;font-weight:400;color:var(--mut)}
+.dvt{flex-basis:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-left:30px;font-size:13px}.dvt input[type=time]{width:96px}.dvg{display:flex;gap:4px;align-items:center}.dvt .chip{padding:5px 9px}
+.sbt{display:flex;gap:4px;flex-wrap:wrap}
+.sbt button{border:1.5px solid var(--bd);background:#fff;border-radius:7px;padding:7px 10px;cursor:pointer;font:inherit;font-size:13px;color:var(--tx)}
+.sbt button.on{color:#fff;font-weight:700;border-color:transparent}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.leg{color:var(--mut);font-size:12px;margin-top:6px}
+table.wt th,table.wt td{padding:3px 5px}
+table.wt td.l{white-space:nowrap}
+table.wt input{min-width:130px;border:1px solid transparent;background:transparent;padding:5px;font-weight:600}
+table.wt input[type=number]{min-width:0;border-color:var(--bd);font-weight:400}
+table.wt input:focus{border-color:var(--pri);background:#fff}
+table.wt tr.inact{opacity:.45}
+.chips.s{gap:4px;flex-wrap:wrap}
+.chips.s .chip{padding:3px 10px;font-size:12px;border-width:1.5px;white-space:nowrap}
+.wr .ck{width:22px;height:22px;flex:none}
+.wr.sel{background:#eaf3fc}
+.selbar{position:sticky;top:46px;z-index:4;background:#fff7e0;border:1px solid #ffd59a;border-radius:8px;padding:6px 8px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.selbar button{border:0;color:#fff;border-radius:7px;padding:7px 11px;cursor:pointer;font:inherit;font-size:13px;font-weight:600}
+td.c{touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+td.mv{outline:3px solid #e11d48!important;outline-offset:-3px}
+#login{max-width:340px;margin:12vh auto;padding:20px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:20px;z-index:99}
+@media print{header,nav,.noprint{display:none!important}body{background:#fff}.card{border:0}}
+.dr{display:grid;grid-template-columns:minmax(0,1fr) 86px 86px 30px 36px 52px;gap:3px;align-items:center;padding:3px 4px;background:#fff;border:1px solid var(--bd);border-left:5px solid var(--c,#ccc);border-radius:6px;margin-bottom:2px}
+.dr.dh0{background:none;border-color:transparent;border-left-color:transparent;color:var(--mut);font-size:11px;text-align:center;margin-bottom:0}
+.dr .dn{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dr.dh0 .dn{text-align:left;font-weight:600}
+.dr input[type=time]{width:100%;padding:3px 2px;font-size:12.5px}
+.dr input[type=time]::-webkit-calendar-picker-indicator{display:none}
+.dr .tn{border:1px dashed #94a3b8;background:#f8fafc;border-radius:6px;padding:5px 2px;font:inherit;font-size:12px;color:var(--pri);cursor:pointer}
+.dr .od{border:1.5px solid var(--bd);background:#fff;border-radius:6px;padding:3px 0;cursor:pointer;font-size:14px}
+.dr .od.on{background:#fed7aa;border-color:#ea580c}
+.dr .dh{text-align:center;font-size:13px}
+.dr .ss{padding:3px 1px;font-size:12px;width:100%}
+.dr .sW{background:#e6f6ec}.dr .sL{background:#fff2cc}.dr .sA{background:#fbd5d5}.dr .sP{background:#fde2cf}.dr .sH{background:#d9e8fb}.dr .sF{background:#e8e1f5}
+.dsum{text-align:right;font-size:13px;padding:2px 6px}
+/* tighter pages */
+main{padding:4px!important}.card{padding:6px!important;margin-bottom:6px!important}.card h3{margin:0 0 5px!important}
+.row{gap:5px!important;margin-bottom:5px!important}header{padding:6px 10px!important}nav{padding:3px 6px!important}nav button{padding:6px 10px!important}
+.cards{gap:5px!important;margin-bottom:6px!important}.k{padding:5px!important}.k b{font-size:18px!important}
+.wr{padding:4px 7px!important;margin-bottom:3px!important;gap:5px!important}.sbt button{padding:5px 8px!important}.sh{margin:6px 0 2px!important;padding-top:2px!important}
+input,select{padding:5px 7px}button.b{padding:6px 11px}.leg{margin-top:4px}.warn{padding:6px!important;margin:4px 0!important}
+.wk2{display:grid;grid-template-columns:minmax(0,1fr) 124px 56px;gap:3px 4px;align-items:center;padding:3px 4px;border:1px solid var(--bd);border-left:5px solid var(--c,#ccc);border-radius:6px;margin-bottom:3px;background:#fff}
+.wk2.inact{opacity:.45}.wk2 .nm{width:100%;font-weight:600;padding:4px 6px}.wk2 select,.wk2 input{padding:4px 5px;font-size:13px;width:100%}
+.wk2 .sf2{grid-column:1/3}.wk2 .bt2{display:flex;gap:3px;justify-content:flex-end}.wk2 .bt2 .b{padding:3px 8px}
+.dc{background:#fff;border:1px solid var(--bd);border-left:5px solid var(--c,#ccc);border-radius:8px;padding:4px 6px;margin-bottom:3px}
+.dc1{display:flex;align-items:center;gap:6px}.dc1 .dnm{flex:1;font-size:15px;min-width:0}.dc1 .dh{font-size:14px;color:#1d4ed8}.dc1 .ss{width:96px;padding:3px 2px;font-size:12px}
+.dc1 .sW{background:#e6f6ec}.dc1 .sL{background:#fff2cc}.dc1 .sA{background:#fbd5d5}.dc1 .sP{background:#fde2cf}.dc1 .sH{background:#d9e8fb}.dc1 .sF{background:#e8e1f5}
+.dc2{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11px;color:var(--mut)}
+.dc2 input[type=time]{width:84px;padding:3px 2px;font-size:13px}.dc2 input[type=time]::-webkit-calendar-picker-indicator{display:none}
+.dc2 .tn{width:84px;border:1px dashed #94a3b8;background:#f8fafc;border-radius:6px;padding:5px 2px;font:inherit;font-size:12.5px;color:var(--pri);cursor:pointer}
+.dc2 .od{margin-left:auto;border:1.5px solid var(--bd);background:#fff;border-radius:6px;padding:4px 8px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--tx)}.dc2 .od.on{background:#fed7aa;border-color:#ea580c;font-weight:700}
+.cards.one{display:grid!important;grid-template-columns:repeat(7,1fr)!important;gap:3px!important;margin-bottom:5px!important}
+.cards.one .k{padding:3px 0!important;border-radius:7px}.cards.one .k b{font-size:16px!important;line-height:1.1}.cards.one .k span{font-size:9.5px;white-space:nowrap}
+.fl{gap:5px!important}.fl>label{gap:2px!important}.rc{padding:4px 6px!important;margin-bottom:4px!important}.rr{margin:2px 0!important;gap:6px!important}
+.card table:not(.g) th,.card table:not(.g) td{padding:3px 5px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const KEY='iat_att_v2';
+const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const ST={
+ N:{l:'Not marked',c:'',col:'#9aa5b1'},
+ W:{l:'Present',c:'✓',col:'#2e7d32'},
+ L:{l:'Late',c:'L',col:'#c79100'},
+ A:{l:'Absent',c:'A',col:'#c62828'},
+ P:{l:'Approved',c:'AP',col:'#d2691e'},
+ H:{l:'Day off',c:'OFF',col:'#1f6fd0'},
+ F:{l:'Public holiday',c:'PH',col:'#6a4bb5'}
+};
+const PICK=['W','L','A','P','H'];
+const DEF={
+ shifts:[{id:'A',name:'Morning 8:30',start:'08:30',group:'day'},{id:'B',name:'Morning 10:00',start:'10:00',group:'day'},{id:'C',name:'Night 8:30 PM',start:'20:30',group:'night'},{id:'D',name:'Night 10:00 PM',start:'22:00',group:'night'}],
+ roles:[
+  {id:'sup',name:'Supervisor',color:'#7c3aed',maxOff:1,perGroup:true,prefDay:[1,2,3],prefNight:[5],strict:true},
+  {id:'cutter',name:'Cutter',color:'#be185d',maxOff:0,perGroup:false,prefDay:[],prefNight:[],strict:false},
+  {id:'tender',name:'Tender',color:'#ea580c',maxOff:1,perGroup:false,prefDay:[1,2,3],prefNight:[1,2,3],strict:true},
+  {id:'clean',name:'Cleaner',color:'#0891b2',maxOff:1,perGroup:false,prefDay:[],prefNight:[],strict:false},
+  {id:'worker',name:'Worker',color:'#2563eb',maxOff:0,perGroup:false,prefDay:[],prefNight:[],strict:false},
+  {id:'driver',name:'Driver',color:'#16a34a',maxOff:0,perGroup:false,prefDay:[],prefNight:[],strict:false,sep:true}],
+ pressureDays:[4,5,6,0],
+ quota:2,maxOffPerGroup:0,maxOffDay:0,minGap:7,orderHrs:1,
+ lateFee:10,absentDays:2,approvedDays:1,
+ users:[{id:'u1',name:'Manager',pin:'1234',role:'admin'}],
+ workers:[],att:{},pub:{}
+};
+const clone=o=>JSON.parse(JSON.stringify(o));
+function fixRoles(D){
+ if(!D.migDrv){
+  D.roles.forEach(r=>{if(/driver/i.test(r.name))r.sep=true});
+  if(!D.roles.some(r=>r.sep))D.roles.push(clone(DEF.roles.find(r=>r.id==='driver')));
+  D.migDrv=1;
+ }
+ D.roles.forEach(r=>{if(r.sep===undefined)r.sep=(r.id==='driver')});
+}
+let DB=load();
+(function migrate(){
+ const RD={sup:{prefDay:[1,2,3],prefNight:[5],strict:true},tender:{prefDay:[1,2,3],prefNight:[1,2,3],strict:true}};
+ if(!DB.roles.some(r=>r.id==='cutter'))DB.roles.splice(1,0,clone(DEF.roles.find(r=>r.id==='cutter')));
+ DB.roles.forEach(r=>{if(r.prefDay===undefined){const d=RD[r.id]||{};r.prefDay=d.prefDay||[];r.prefNight=d.prefNight||[];r.strict=!!d.strict}delete r.noPressure});
+ fixRoles(DB);
+})();
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x)return Object.assign(clone(DEF),x)}catch(e){}return clone(DEF)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
+const todayS=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+let me=null,tab='today',selDate=todayS(),mon=selDate.slice(0,7),filt={role:'',shift:''},plan=null,planInfo=null,rf=null,rt=null;
+try{const u=sessionStorage.getItem('iat_user');if(u)me=DB.users.find(x=>x.id===u)||null}catch(e){}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const fmt=(y,m,d)=>`${y}-${pad(m)}-${pad(d)}`;
+const dim=(y,m)=>new Date(y,m,0).getDate();
+const dow=dt=>new Date(dt+'T00:00:00').getDay();
+const uid=()=>'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const isAdmin=()=>me&&me.role==='admin';
+const dm=d=>`${d.slice(8)}/${d.slice(5,7)}`;
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2300)}
+const roleOf=w=>DB.roles.find(r=>r.id===w.role)||{name:'?',color:'#888',maxOff:0};
+const shiftOf=w=>DB.shifts.find(s=>s.id===w.shift)||{name:'—',group:'day'};
+const grp=w=>shiftOf(w).group;
+const isSep=w=>!!roleOf(w).sep;
+const active=()=>DB.workers.filter(w=>w.active!==false);
+const key=(d,id)=>d+'|'+id;
+function stOf(d,id,pl){const k=key(d,id);return (pl&&pl[k]&&pl[k].s)||(DB.att[k]&&DB.att[k].s)||(DB.pub[d]?'F':'N')}
+function monthDates(mo){const[y,m]=mo.split('-').map(Number);return Array.from({length:dim(y,m)},(_,i)=>fmt(y,m,i+1))}
+const quotaOf=w=>(w.quota===''||w.quota==null)?DB.quota:Number(w.quota);
+const countSt=(mo,id,st)=>monthDates(mo).filter(d=>stOf(d,id)===st).length;
+const offsOn=(d,pl)=>active().filter(w=>!isSep(w)&&stOf(d,w.id,pl)==='H');
+/* ---------- rules ---------- */
+const prefOf=w=>{const r=roleOf(w);return (grp(w)==='night'?r.prefNight:r.prefDay)||[]};
+const prefTxt=a=>[1,2,3,4,5,6,0].filter(x=>a.includes(x)).map(x=>DN[x].slice(0,3)).join(', ');
+function violationFor(w,d,pl){
+ const r=roleOf(w),msgs=[];
+ const oth=offsOn(d,pl).filter(x=>x.id!==w.id);
+ if(r.maxOff>0){const same=oth.filter(x=>x.role===w.role&&(!r.perGroup||grp(x)===grp(w)));
+  if(same.length>=r.maxOff)msgs.push(`Another ${r.name} is already off that day${r.perGroup?' (same day/night shift)':''}: ${same.map(x=>x.name).join(', ')}.`)}
+ if(DB.maxOffPerGroup>0){const g=oth.filter(x=>grp(x)===grp(w));if(g.length>=DB.maxOffPerGroup)msgs.push(`Max people off in this shift period reached (${DB.maxOffPerGroup}).`)}
+ if(DB.maxOffDay>0&&oth.length>=DB.maxOffDay)msgs.push(`Already ${oth.length} people off that day (max ${DB.maxOffDay}).`);
+ return msgs;
+}
+function softFor(w,d){const p=prefOf(w);return p.length&&!p.includes(dow(d))?[`${roleOf(w).name}s on the ${grp(w)} shift are normally off on: ${prefTxt(p)}.`]:[]}
+function monthViolations(mo){
+ const out=[];
+ monthDates(mo).forEach(d=>{
+  const offs=offsOn(d);
+  DB.roles.forEach(r=>{
+   if(r.maxOff>0){
+    const rs=offs.filter(w=>w.role===r.id);
+    (r.perGroup?['day','night']:[null]).forEach(g=>{const l=rs.filter(w=>!g||grp(w)===g);
+     if(l.length>r.maxOff)out.push({d,t:`${l.length} ${r.name}s off together${g?(g==='day'?' (day shift)':' (night shift)'):''}: ${l.map(x=>x.name).join(', ')}`})});
+   }
+  });
+  if(DB.maxOffPerGroup>0)['day','night'].forEach(g=>{const l=offs.filter(w=>grp(w)===g);if(l.length>DB.maxOffPerGroup)out.push({d,t:`${l.length} people off in ${g} shift (limit ${DB.maxOffPerGroup})`})});
+  if(DB.maxOffDay>0&&offs.length>DB.maxOffDay)out.push({d,t:`${offs.length} people off together (max ${DB.maxOffDay})`});
+  offs.forEach(w=>{const sf=softFor(w,d);if(sf.length)out.push({d,t:`${w.name}: ${sf[0]}`,soft:true})});
+ });
+ active().filter(w=>!isSep(w)).forEach(w=>{const hs=monthDates(mo).filter(d=>stOf(d,w.id)==='H'),q=quotaOf(w);if(hs.length>q)out.push({d:hs[hs.length-1],t:`${w.name} has ${hs.length} days off this month (allowed ${q}) — tap one in the grid to remove it`})});
+ return out;
+}
+function suggest(mo){
+ const dates=monthDates(mo),n=dates.length,pl={},unres=[],relaxed=[],capBroke=[],gapBroke=[];
+ const staff=active().filter(w=>!isSep(w));
+ const pr=w=>{const r=roleOf(w);return (r.strict&&prefOf(w).length?2:0)+(r.maxOff>0?1:0)};
+ const t0=todayS(),trimmed=[];
+ staff.forEach(w=>{const hs=dates.filter(d=>stOf(d,w.id)==='H');let ex=hs.length-quotaOf(w);for(let i=hs.length-1;i>=0&&ex>0;i--){if(hs[i]>t0){pl[key(hs[i],w.id)]={s:'N'};ex--;if(!trimmed.includes(w.name))trimmed.push(w.name)}}});
+ const kept=(w)=>dates.filter(d=>stOf(d,w.id,pl)==='H').length;
+ const list=staff.map(w=>({w,need:quotaOf(w)-kept(w)})).filter(x=>x.need>0).sort((a,b)=>pr(b.w)-pr(a.w)||roleIdx(a.w)-roleIdx(b.w));
+ const existing=staff.reduce((a,w)=>a+kept(w),0);
+ const cap=DB.maxOffDay>0?DB.maxOffDay:Math.max(1,Math.ceil((existing+list.reduce((a,x)=>a+x.need,0))/n));
+ const maxNeed=Math.max(0,...list.map(x=>x.need));
+ const PASSES=[{pref:1,cap:1,gap:1},{pref:0,cap:1,gap:1},{pref:0,cap:0,gap:1},{pref:0,cap:0,gap:0}];
+ const pick=(w,target,o,gapMin)=>{
+  const pref=prefOf(w),r=roleOf(w);let best=null,bs=1e9;
+  const own=[];dates.forEach((d,i)=>{if(stOf(d,w.id,pl)==='H')own.push(i)});
+  dates.forEach((d,i)=>{
+   if(stOf(d,w.id,pl)!=='N')return;
+   if(violationFor(w,d,pl).length)return;
+   const wd=dow(d);
+   if(o.pref&&r.strict&&pref.length&&!pref.includes(wd))return;
+   const offs=offsOn(d,pl);
+   if(o.cap&&offs.length>=cap)return;
+   if(o.gap&&own.some(j=>Math.abs(i-j)<gapMin))return;
+   let sc=offs.filter(x=>grp(x)===grp(w)).length*10+offs.length*4+Math.abs(i+1-target);
+   if(pref.length){if(!pref.includes(wd))sc+=25}else if(DB.pressureDays.includes(wd))sc+=15;
+   own.forEach(j=>{const g=Math.abs(i-j);if(g<15)sc+=(15-g)*3});
+   if(sc<bs){bs=sc;best=d}
+  });
+  return best;
+ };
+ for(let k=0;k<maxNeed;k++)list.forEach(({w,need})=>{
+  if(k>=need)return;
+  const target=Math.round(n/need*(k+0.5)),gapMin=Math.max(1,Math.min(DB.minGap||0,Math.floor((n-1)/need)));
+  let d=null,used=-1;
+  for(let pi=0;pi<PASSES.length&&!d;pi++){d=pick(w,target,PASSES[pi],gapMin);if(d)used=pi}
+  if(!d){unres.push(w.name);return}
+  pl[key(d,w.id)]={s:'H'};
+  const add=(a)=>{if(!a.includes(w.name))a.push(w.name)};
+  if(used>=1&&roleOf(w).strict&&prefOf(w).length)add(relaxed);
+  if(used>=2)add(capBroke);
+  if(used>=3)add(gapBroke);
+ });
+ return{pl,unres,trimmed,count:Object.keys(pl).filter(k=>pl[k].s==='H').length,relaxed,capBroke,gapBroke,cap};
+}
+/* ---------- shell ---------- */
+let shellKey='',lastTab='';
+const snap=()=>({y:window.scrollY,c:[...document.querySelectorAll('#v .gw,#v .tw')].map(e=>[e.scrollLeft,e.scrollTop])});
+function restore(sc){window.scrollTo(0,sc.y);document.querySelectorAll('#v .gw,#v .tw').forEach((e,i)=>{if(sc.c[i]){e.scrollLeft=sc.c[i][0];e.scrollTop=sc.c[i][1]}})}
+function render(){
+ if(!me){shellKey='';return renderLogin()}
+ const tabs=[['today','Today'],['drv','Drivers'],['month','Monthly sheet'],['plan','Days-off planner'],['rep','Report']];
+ if(isAdmin())tabs.push(['set','Settings']);
+ if(!tabs.find(t=>t[0]===tab))tab='today';
+ const sk=me.id+'|'+me.name+'|'+isAdmin();
+ const rebuild=shellKey!==sk||!$('#v');
+ const sc=(!rebuild&&tab===lastTab)?snap():{y:0,c:[]};
+ if(rebuild){
+  $('#app').innerHTML=`<header><h1>IAT Attendance</h1><span>${esc(me.name)} (${isAdmin()?'Manager':'Supervisor'})</span><button onclick="logout()">Log out</button></header>
+  <nav>${tabs.map(t=>`<button onclick="go('${t[0]}')">${t[1]}</button>`).join('')}</nav><main id="v"></main>`;
+  shellKey=sk;
+ }
+ document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('on',tabs[i][0]===tab));
+ ({today:vToday,drv:vDrv,month:vMonth,plan:vPlan,rep:vRep,set:vSet})[tab]();
+ lastTab=tab;restore(sc);
+}
+function go(t){tab=t;mv=null;render()}
+function keepScroll(f){const y=window.scrollY;f();window.scrollTo(0,y)}
+function renderLogin(){
+ $('#app').innerHTML=`<div id="login" class="card"><h3>Log in</h3><div class="fl">
+ <label>User<select id="lu">${DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>
+ <label>PIN<input id="lp" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()"></label>
+ <button class="b" onclick="doLogin()">Log in</button></div>
+ <p style="color:var(--mut);font-size:12px">First time: Manager / 1234. Change it in Settings.</p></div>`;
+}
+function doLogin(){const u=DB.users.find(x=>x.id===$('#lu').value);if(u&&String(u.pin)===$('#lp').value){me=u;try{sessionStorage.setItem('iat_user',u.id)}catch(e){}render()}else toast('Wrong PIN')}
+function logout(){me=null;try{sessionStorage.removeItem('iat_user')}catch(e){}render()}
+function modal(h){const o=document.createElement('div');o.className='ov';o.innerHTML=`<div class="md">${h}</div>`;o.onclick=e=>{if(e.target===o)o.remove()};document.body.appendChild(o)}
+function closeM(){document.querySelectorAll('.ov').forEach(o=>o.remove())}
+const roleOpts=(sel,all)=>(all?`<option value="">All types</option>`:'')+DB.roles.map(r=>`<option value="${r.id}" ${sel===r.id?'selected':''}>${esc(r.name)}</option>`).join('');
+const shiftOpts=(sel,all)=>(all?`<option value="">All shifts</option>`:'')+DB.shifts.map(s=>`<option value="${s.id}" ${sel===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+const roleIdx=w=>{const i=DB.roles.findIndex(r=>r.id===w.role);return i<0?99:i};
+const shiftIdx=w=>{const i=DB.shifts.findIndex(x=>x.id===w.shift);return i<0?99:i};
+/* who: 'main' = staff on shifts, 'sep' = separate lists (drivers), 'all'. Sorted by type priority (order of the types in Settings). */
+function fWorkers(who){who=who||'main';return active().filter(w=>(who==='all'||(who==='sep')===isSep(w))&&(who==='sep'||!filt.role||w.role===filt.role)&&(isSep(w)||!filt.shift||w.shift===filt.shift)).sort((a,b)=>roleIdx(a)-roleIdx(b)||shiftIdx(a)-shiftIdx(b)||a.name.localeCompare(b.name))}
+const roleTag=w=>`<span class="tag" style="background:${roleOf(w).color}">${esc(roleOf(w).name)}</span>`;
+const legend=()=>`<div class="leg">Nothing is pre-filled — tap what happened for each worker. Present · Late (−${DB.lateFee} AED) · Absent = no approval (−${DB.absentDays} days wage) · Approved = approved absence (−${DB.approvedDays} day wage) · Day off = normal rota day off · Public holiday = set by manager, no deduction.</div>`;
+const filterBar=(extra='')=>`<div class="row noprint"><select onchange="filt.role=this.value;render()">${roleOpts(filt.role,1)}</select><select onchange="filt.shift=this.value;render()">${shiftOpts(filt.shift,1)}</select>${extra}</div>`;
+/* ---------- today ---------- */
+function setSt(d,id,s){
+ const k=key(d,id),prev=DB.att[k]||{};
+ if(prev.s===s)delete DB.att[k];
+ else DB.att[k]={...prev,s};
+ save();render();
+}
+/* ---------- drivers: arrival / departure times and hours ---------- */
+const toMin=t=>{const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?(+m[1])*60+(+m[2]):null};
+function drvHours(a){if(!a||(a.s!=='W'&&a.s!=='L'))return null;const i=toMin(a.in),o=toMin(a.out);if(i==null||o==null)return null;let m=o-i;if(m<0)m+=1440;return Math.round((m/60+(a.o?(Number(DB.orderHrs)||0):0))*10)/10}
+const nowHM=()=>{const n=new Date();return pad(n.getHours())+':'+pad(n.getMinutes())};
+function drvEdit(d,id,fn){const k=key(d,id),a={...(DB.att[k]||{})};fn(a);if(!a.s||a.s==='N'||a.s==='H'||a.s==='F'||a.s==='A'||a.s==='P')a.s='W';DB.att[k]=a;save();render()}
+const drvIn=(d,id)=>drvEdit(d,id,a=>{a.in=nowHM()});
+const drvOut=(d,id)=>drvEdit(d,id,a=>{a.out=nowHM()});
+const drvOrder=(d,id)=>drvEdit(d,id,a=>{a.o=a.o?0:1});
+const drvTime=(d,id,f,v)=>drvEdit(d,id,a=>{if(v)a[f]=v;else delete a[f]});
+const SHORT={N:'—',W:'✓',L:'L',A:'A',P:'AP',H:'OFF',F:'PH'};
+function drvSt(d,id,v){const k=key(d,id),prev=DB.att[k]||{};if(v==='N'||v==='')delete DB.att[k];else DB.att[k]={...prev,s:v};save();render()}
+function drvAllPresent(){fWorkers('sep').forEach(w=>{if(stOf(selDate,w.id)==='N')DB.att[key(selDate,w.id)]={s:'W'}});save();render()}
+const drvRow=(w,d)=>{
+ const a=DB.att[key(d,w.id)]||{},cur=stOf(d,w.id),h=drvHours(a),o=!!a.o;
+ const tc=(f,fn,ic)=>a[f]?`<input type="time" value="${a[f]}" onchange="drvTime('${d}','${w.id}','${f}',this.value)">`:`<button class="tn" onclick="${fn}('${d}','${w.id}')">${ic}</button>`;
+ return `<div class="dc" id="tr_${w.id}" style="--c:${roleOf(w).color}"><div class="dc1"><b class="dnm">${esc(w.name)}</b><b class="dh">${h!=null?h+' h':(a.in&&!a.out?'…':'')}</b>
+ <select class="ss s${cur}" onchange="drvSt('${d}','${w.id}',this.value)">${['N','W','L','A','P','H'].map(k=>`<option value="${k}" ${cur===k?'selected':''}>${k==='N'?'Status':ST[k].l}</option>`).join('')}${cur==='F'?'<option selected>Public holiday</option>':''}</select></div>
+ <div class="dc2"><span>Arrived</span>${tc('in','drvIn','▶ now')}<span>Left</span>${tc('out','drvOut','■ now')}<button class="od ${o?'on':''}" onclick="drvOrder('${d}','${w.id}')">📦 Order</button></div></div>`};
+/* select workers, then give them all one status */
+let sel=new Set();
+function selBarHTML(){
+ if(!sel.size)return '';
+ return `<div class="selbar"><b>${sel.size} selected → set to:</b>${PICK.map(k=>`<button style="background:${ST[k].col}" onclick="applySel('${k}')">${ST[k].l}</button>`).join('')}<button style="background:#6b7785" onclick="applySel('N')">Clear marks</button><button style="background:#aab4bf" onclick="selClear()">Cancel</button></div>`;
+}
+function drawSelBar(){const e=document.getElementById('selbar');if(e)e.innerHTML=selBarHTML()}
+function togSel(id){const r=document.getElementById('tr_'+id);if(sel.has(id)){sel.delete(id);if(r)r.classList.remove('sel')}else{sel.add(id);if(r)r.classList.add('sel')}drawSelBar()}
+function selDrivers(){selAll(false)}
+function selAll(onlyN){sel=new Set(fWorkers(tab==='drv'?'sep':'main').filter(w=>!onlyN||stOf(selDate,w.id)==='N').map(w=>w.id));render()}
+function selShift(sid){fWorkers('main').filter(w=>w.shift===sid).forEach(w=>sel.add(w.id));render()}
+function selClear(){sel.clear();render()}
+function applySel(st){
+ if(!sel.size)return;const d=selDate,n=sel.size;
+ sel.forEach(id=>{const k=key(d,id),prev=DB.att[k]||{};if(st==='N')delete DB.att[k];else DB.att[k]={...prev,s:st}});
+ sel.clear();save();render();toast(`${n} workers set to ${ST[st].l}`);
+}
+function vToday(){
+ const d=selDate,all=active().filter(w=>!isSep(w)),ws=fWorkers('main');
+ const cnt=st=>all.filter(w=>stOf(d,w.id)===st).length;
+ const v=monthViolations(d.slice(0,7)).filter(x=>!x.soft);
+ let h=`<div class="row"><input type="date" value="${d}" onchange="selDate=this.value;sel.clear();render()"><b>${DN[dow(d)]}</b>
+  <button class="b sec sm" onclick="selDate=todayS();sel.clear();render()">Today</button>
+  ${DB.pressureDays.includes(dow(d))?'<span class="tag" style="background:#e08a00">Busy day</span>':''}
+  ${DB.pub[d]?`<span class="tag" style="background:${ST.F.col}">Public holiday: ${esc(DB.pub[d])}</span>`:''}</div>
+ <div class="cards one"><div class="k"><b>${all.length}</b><span>Workers</span></div><div class="k"><b>${cnt('W')+cnt('L')}</b><span>Present</span></div><div class="k"><b>${cnt('L')}</b><span>Late</span></div><div class="k"><b>${cnt('A')+cnt('P')}</b><span>Absent</span></div><div class="k"><b>${cnt('H')}</b><span>Day off</span></div><div class="k"><b>${cnt('F')}</b><span>Holiday</span></div><div class="k"><b>${cnt('N')}</b><span>Unmarked</span></div></div>`;
+ h+=filterBar(`<button class="b" onclick="selAll(false)">Select all</button><button class="b sec" onclick="selAll(true)">Select not-marked</button><button class="b sec" onclick="selClear()">Clear selection</button>`);
+ h+=`<div id="selbar">${selBarHTML()}</div>`;
+ if(!all.length)h+=`<div class="warn">No workers yet. ${isAdmin()?'Go to Settings and add them, or import your old attendance sheet there.':'Ask the manager to add them.'}</div>`;
+ const rowHTML=w=>{
+  const cur=stOf(d,w.id),r=roleOf(w);
+  return `<div class="wr ${sel.has(w.id)?'sel':''}" id="tr_${w.id}" style="--c:${r.color}"><input type="checkbox" class="ck" ${sel.has(w.id)?'checked':''} onchange="togSel('${w.id}')"><div class="nm">${esc(w.name)}<small>${esc(r.name)}${cur==='F'?' · public holiday':''}</small></div>
+   <div class="sbt">${PICK.map(k=>`<button class="${cur===k?'on':''}" style="${cur===k?`background:${ST[k].col}`:''}" onclick="setSt('${d}','${w.id}','${k}')">${ST[k].l}</button>`).join('')}</div></div>`;
+ };
+ DB.shifts.forEach(s=>{
+  const l=ws.filter(w=>w.shift===s.id);if(!l.length)return;
+  h+=`<div class="sh">${esc(s.name)} · ${l.length} people <button class="b sm sec" onclick="selShift('${s.id}')">Select this shift</button></div>`;
+  l.forEach(w=>{h+=rowHTML(w)});
+ });
+ const noShift=ws.filter(w=>!DB.shifts.some(s=>s.id===w.shift));
+ if(noShift.length){h+=`<div class="sh">No shift set</div>`;noShift.forEach(w=>{h+=rowHTML(w)})}
+ h+=`<div class="leg">Tip: tap <b>Select all</b>, choose <b>Present</b> in the yellow bar, then change only the workers who were late, absent or off.</div>`;
+ h+=legend();
+ h+=v.length?`<div class="warn bad"><b>Days-off rule problems this month (${v.length}):</b><br>${v.slice(0,6).map(x=>`${dm(x.d)}: ${esc(x.t)}`).join('<br>')}${v.length>6?'<br>…':''}</div>`:'';
+ $('#v').innerHTML=h;
+}
+let drf=null,drt=null;
+function drvRange(){
+ const[y,m]=mon.split('-').map(Number),f=rf||mon+'-01',t=rt||fmt(y,m,dim(y,m));
+ const dates=[];for(let d=new Date(f+'T00:00:00');d<=new Date(t+'T00:00:00');d.setDate(d.getDate()+1))dates.push(fmt(d.getFullYear(),d.getMonth()+1,d.getDate()));
+ const rows=fWorkers('sep').filter(w=>!drvPick||w.id===drvPick).map(w=>{
+  let days=0,hrs=0,orders=0,missing=0;const det=[];
+  dates.forEach(d=>{const a=DB.att[key(d,w.id)];if(!a||(a.s!=='W'&&a.s!=='L'))return;days++;const h=drvHours(a);if(h==null)missing++;else hrs+=h;if(a.o)orders++;det.push({d,s:a.s,in:a.in||'',out:a.out||'',o:!!a.o,h})});
+  hrs=Math.round(hrs*10)/10;
+  return{w,days,hrs,orders,missing,avg:days-missing>0?Math.round(hrs/(days-missing)*10)/10:0,det};
+ });
+ return{f,t,dates,rows};
+}
+function drvRangeXLSX(){
+ const r=drvRange();if(!r.rows.length)return toast('No drivers');
+ const a=[['Driver','Days worked','Total hours','Average hours / day','Orders (+'+(Number(DB.orderHrs)||0)+' h each)','Days missing times'],...r.rows.map(x=>[x.w.name,x.days,x.hrs,x.avg,x.orders,x.missing||''])];
+ const b=[['Date','Driver','Status','Arrived','Left company','With order','Hours']];
+ r.rows.forEach(x=>x.det.forEach(e=>b.push([e.d,x.w.name,ST[e.s].l,e.in,e.out,e.o?'Yes':'',e.h==null?'':e.h])));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(b),'Daily details');
+ XLSX.writeFile(wb,`drivers_hours_${r.f}_${r.t}.xlsx`);
+}
+function drvRangePDF(){
+ if(!window.jspdf)return toast('PDF library not loaded — check the internet connection');
+ const r=drvRange();if(!r.rows.length)return toast('No drivers');
+ const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+ doc.setFontSize(13);doc.text(`IAT Trading - Drivers hours - ${r.f} to ${r.t}`,10,14);
+ doc.autoTable({startY:20,head:[['Driver','Days','Total hours','Avg / day','Orders']],body:r.rows.map(x=>[x.w.name,x.days,x.hrs,x.avg,x.orders]),styles:{fontSize:9},headStyles:{fillColor:[15,108,189]}});
+ const body=[];r.rows.forEach(x=>x.det.forEach(e=>body.push([e.d,x.w.name,e.in,e.out,e.o?'Yes':'',e.h==null?'':e.h])));
+ if(body.length)doc.autoTable({startY:doc.lastAutoTable.finalY+8,head:[['Date','Driver','Arrived','Left','Order','Hours']],body,styles:{fontSize:8},headStyles:{fillColor:[100,116,139]}});
+ doc.save(`drivers_hours_${r.f}_${r.t}.pdf`);
+}
+let drvPick='';
+function drvReportCard(){
+ const all=fWorkers('sep');if(!all.length)return '';
+ const g=drvRange(),tot=Math.round(g.rows.reduce((q,x)=>q+x.hrs,0)*10)/10;
+ const det=[];g.rows.forEach(x=>x.det.forEach(e=>det.push({n:x.w.name,...e})));
+ return `<div class="card"><h3>Drivers — hours (${g.f} → ${g.t})</h3><div class="row noprint"><select onchange="drvPick=this.value;render()"><option value="">All drivers</option>${all.map(w=>`<option value="${w.id}" ${drvPick===w.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select><button class="b" onclick="drvRangePDF()">PDF</button><button class="b sec" onclick="drvRangeXLSX()">Excel</button></div>
+ <div class="tw"><table><tr><th class="l">Driver</th><th>Days</th><th>Hours</th><th>Avg/day</th><th>Orders</th></tr>${g.rows.map(x=>`<tr><td class="l">${esc(x.w.name)}</td><td>${x.days}</td><td><b>${x.hrs}</b></td><td>${x.avg||''}</td><td>${x.orders||''}</td></tr>`).join('')}<tr><td class="l"><b>Total</b></td><td></td><td><b>${tot}</b></td><td></td><td></td></tr></table></div>
+ ${g.rows.some(x=>x.missing)?`<div class="warn">Days without arrival or leaving time are not counted: ${g.rows.filter(x=>x.missing).map(x=>`${esc(x.w.name)} (${x.missing})`).join(', ')}.</div>`:''}
+ ${det.length?`<div class="tw" style="margin-top:5px"><table><tr><th class="l">Date</th><th class="l">Driver</th><th>Arrived</th><th>Left</th><th>Order</th><th>Hours</th></tr>${det.map(e=>`<tr><td class="l">${dm(e.d)} ${DN[dow(e.d)].slice(0,3)}</td><td class="l">${esc(e.n)}</td><td>${e.in}</td><td>${e.out}</td><td>${e.o?'📦':''}</td><td><b>${e.h==null?'':e.h}</b></td></tr>`).join('')}</table></div>`:''}</div>`;
+}
+/* ---------- drivers page ---------- */
+function vDrv(){
+ const d=selDate,dr=fWorkers('sep');
+ let h=`<div class="row"><input type="date" value="${d}" onchange="selDate=this.value;render()"><b>${DN[dow(d)].slice(0,3)}</b><button class="b sec sm" onclick="selDate=todayS();render()">Today</button><button class="b sm" onclick="drvAllPresent()">All present</button></div>`;
+ if(!dr.length)return $('#v').innerHTML=h+`<div class="warn">No drivers yet. ${isAdmin()?'Go to Settings and set a worker\'s type to Driver, or paste names in "Add many at once".':'Ask the manager to add them.'}</div>`;
+ const tot=Math.round(dr.reduce((q,w)=>q+(drvHours(DB.att[key(d,w.id)])||0),0)*10)/10;
+ dr.forEach(w=>{h+=drvRow(w,d)});
+ h+=`<div class="dsum">${dr.length} drivers · total today <b>${tot} h</b></div><div class="leg">▶ now = he just arrived · ■ now = he finally left the company (or type the time) · 📦 Order = left with an order, +${Number(DB.orderHrs)||0} h added. Reports: Report page → Drivers.</div>`;
+ $('#v').innerHTML=h;
+}
+/* ---------- monthly ---------- */
+const tint=(c,a)=>{const r=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));return `rgba(${r[0]},${r[1]},${r[2]},${a})`};
+function gridHTML(mo,pl,edit,who){
+ const[y,m]=mo.split('-').map(Number),n=dim(y,m),ws=fWorkers(who||'main'),cnt=ws.length;
+ const dense=cnt>16,fs=cnt>30?8:cnt>20?9:10,tot={};ws.forEach(w=>tot[w.id]={N:0,W:0,L:0,A:0,P:0,H:0,F:0,hrs:0});
+ if(!cnt)return '<div class="warn">No workers in this list.</div>';
+ let h=`<div class="gw"><table class="g" style="font-size:${fs}px"><thead><tr><th class="dcol">Date</th>`;
+ ws.forEach(w=>{h+=`<th class="wn" style="border-top:4px solid ${roleOf(w).color}" title="${esc(w.name)} — ${esc(roleOf(w).name)}, ${esc(shiftOf(w).name)}"><span>${esc(w.name)}</span></th>`});
+ h+=`<th class="oc wn"><span>People off</span></th></tr></thead><tbody>`;
+ for(let d=1;d<=n;d++){
+  const dt=fmt(y,m,d),wd=dow(dt);let off=0;
+  h+=`<tr><td class="dcol ${DB.pub[dt]?'ph':DB.pressureDays.includes(wd)?'pr':''}" title="${DB.pub[dt]?esc(DB.pub[dt]):''}"><b>${d}</b> ${DN[wd].slice(0,3)}</td>`;
+  ws.forEach(w=>{
+   const st=stOf(dt,w.id,pl);tot[w.id][st]++;tot[w.id].hrs=Math.round((tot[w.id].hrs+(drvHours(DB.att[key(dt,w.id)])||0))*10)/10;if(st==='H')off++;
+   const planned=pl&&pl[key(dt,w.id)]&&!DB.att[key(dt,w.id)],isMv=mv&&mv.d===dt&&mv.id===w.id;
+   h+=`<td class="c ${st} ${planned?'pl':''} ${isMv?'mv':''}" ${st==='N'?`style="background:${tint(roleOf(w).color,.14)}"`:''} ${edit?`onpointerdown="lpStart('${dt}','${w.id}')" onpointerup="lpCancel()" onpointerleave="lpCancel()" onpointercancel="lpCancel()" oncontextmenu="return false" onclick="cellTap('${dt}','${w.id}')"`:''}>${dense&&st==='H'?'•':(who==='sep'&&drvHours(DB.att[key(dt,w.id)])!=null?drvHours(DB.att[key(dt,w.id)]):ST[st].c)}</td>`;
+  });
+  h+=`<td class="oc"><b>${off||''}</b></td></tr>`;
+ }
+ [...(who==='sep'?[['Hours',t=>t.hrs]]:[]),['Present',t=>t.W+t.L],['Late',t=>t.L],['Absent',t=>t.A+t.P],['Day off',t=>t.H],['Not marked',t=>t.N]].forEach(([lb,f])=>{
+  h+=`<tr class="tt"><td class="dcol">${lb}</td>${ws.map(w=>`<td>${f(tot[w.id])||''}</td>`).join('')}<td class="oc"></td></tr>`;
+ });
+ h+=`</tbody></table></div><div class="leg">✓ Present · L Late · A Absent · AP Approved absence · OFF (• when many workers) Day off · PH Public holiday · blank = not marked yet. Each column is tinted with the worker's type color. Orange date = busy day, purple = public holiday. Tap a cell to set it · <b>press and hold a day off to move it</b>.</div>`;
+ return h;
+}
+/* ---------- move a day off: press and hold it, then tap the new cell ---------- */
+let mv=null,lpTimer=null,lpFired=false;
+function setOff(d,id,on){
+ const k=key(d,id),base=DB.att[k];
+ if(plan){if(on)plan[k]={s:'H'};else if(base&&base.s==='H')plan[k]={s:'N'};else delete plan[k]}
+ else{if(on)DB.att[k]={...(base&&base.n?{n:base.n}:{}),s:'H'};else delete DB.att[k];save()}
+}
+function lpCancel(){clearTimeout(lpTimer)}
+function lpStart(d,id){lpCancel();lpFired=false;lpTimer=setTimeout(()=>{if(stOf(d,id,plan)==='H'){mv={d,id};lpFired=true;try{if(navigator.vibrate)navigator.vibrate(40)}catch(e){}render()}},450)}
+function cancelMove(){mv=null;render()}
+const quotaWarn=(w,d,ov)=>{const mo=d.slice(0,7),q=quotaOf(w),h=monthDates(mo).filter(x=>stOf(x,w.id,ov)==='H').length;return h>=q?[`${w.name} already has ${h} day${h===1?'':'s'} off this month (allowed ${q}).`]:[]};
+const warnText=(w,d,ov)=>[...quotaWarn(w,d,ov),...violationFor(w,d,ov),...softFor(w,d)];
+function cellTap(d,id){
+ if(lpFired){lpFired=false;return}
+ if(mv)return dropMove(d,id);
+ if(plan&&tab==='plan')return planToggle(d,id);
+ cellClick(d,id);
+}
+function planToggle(d,id){
+ const w=DB.workers.find(x=>x.id===id),st=stOf(d,id,plan);
+ if(st==='H'){setOff(d,id,false);return render()}
+ if(st!=='N')return toast('That day already has a status');
+ const msg=warnText(w,d,plan);
+ if(msg.length&&!confirm('This breaks a rule:\n- '+msg.join('\n- ')+'\nAdd it anyway?'))return;
+ setOff(d,id,true);render();
+}
+function dropMove(d2,id2){
+ const src=mv,w2=DB.workers.find(x=>x.id===id2);
+ if(src.d===d2&&src.id===id2){mv=null;return render()}
+ const st=stOf(d2,id2,plan);
+ if(st==='H')return toast('That worker already has a day off there');
+ if(st!=='N')return toast('That cell already has a status — pick an empty one');
+ const ov=Object.assign({},plan||{},{[key(src.d,src.id)]:{s:'N'}});
+ const msg=warnText(w2,d2,ov);
+ if(msg.length&&!confirm('Moving here breaks a rule:\n- '+msg.join('\n- ')+'\nMove it anyway?'))return;
+ setOff(src.d,src.id,false);setOff(d2,id2,true);mv=null;render();toast('Day off moved');
+}
+function mvBar(){
+ if(!mv)return '';const w=DB.workers.find(x=>x.id===mv.id);
+ return `<div class="selbar" style="background:#fde8ec;border-color:#f3b4c0"><b>Moving ${esc(w?w.name:'')}'s day off (${dayLabel(mv.d)})</b> — tap an empty cell, same or another worker <button style="background:#6b7785" onclick="cancelMove()">Cancel</button></div>`;
+}
+const monBar=mode=>filterBar(`<input type="month" value="${mon}" onchange="mon=this.value;plan=null;render()"><button class="b" onclick="monthPDF('${mode}')">Download PDF</button><button class="b sec" onclick="monthXLSX('${mode}')">Download Excel</button>`);
+function vMonth(){
+ $('#v').innerHTML=monBar('att')+mvBar()+`<div class="card">${gridHTML(mon,null,true,'main')}</div>`; 
+}
+let cur={};
+function cellClick(d,id){
+ const w=DB.workers.find(x=>x.id===id),rec=DB.att[key(d,id)]||{};
+ cur={d,id,s:stOf(d,id)};
+ modal(`<h3>${esc(w.name)} — ${dm(d)} ${DN[dow(d)]}</h3>
+ <div class="chips" id="cs"></div><div id="vw"></div>
+ <div class="fl" style="margin-top:10px"><label>Note (optional)<input id="cn" value="${esc(rec.n||'')}"></label></div>
+ <div class="row" style="margin-top:12px"><button class="b" onclick="saveCell()">Save</button><button class="b sec" onclick="closeM()">Cancel</button></div>`);
+ pickSt(cur.s);
+}
+function pickSt(k){
+ cur.s=k;
+ $('#cs').innerHTML=Object.keys(ST).map(x=>`<button class="chip ${x===k?'sel':''}" style="--c:${ST[x].col}" onclick="pickSt('${x}')">${ST[x].l}</button>`).join('');
+ const w=DB.workers.find(x=>x.id===cur.id);let h='';
+ if(k==='H'){const v=violationFor(w,cur.d),sf=softFor(w,cur.d);
+  if(v.length)h+=`<div class="warn bad">⚠ This breaks a rule:<br>${v.map(esc).join('<br>')}<br><small>You can still save it.</small></div>`;
+  if(sf.length)h+=`<div class="warn">${sf.map(esc).join('<br>')}</div>`}
+ $('#vw').innerHTML=h;
+}
+function saveCell(){
+ const n=$('#cn').value.trim(),k=key(cur.d,cur.id),def=DB.pub[cur.d]?'F':'N';
+ const old=DB.att[k]||{},extra=!!(old.in||old.out||old.o);if(cur.s===def&&!n&&!extra)delete DB.att[k];else{const o={...old,s:cur.s};if(n)o.n=n;else delete o.n;DB.att[k]=o}
+ save();closeM();render();
+}
+/* ---------- planner + public holidays ---------- */
+function vPlan(){
+ const v=monthViolations(mon);
+ let h=monBar('plan')+mvBar();
+ h+=`<div class="card"><h3>Days off</h3><div class="row noprint">
+ ${isAdmin()?`<button class="b" onclick="doSuggest()">Suggest days off for this month</button>`:''}
+ ${plan?`<button class="b grn" onclick="applyPlan()">Approve plan</button><button class="b sec" onclick="plan=null;render()">Cancel</button>`:''}</div>
+ <div class="leg" style="margin:0 0 8px">Each worker gets ${DB.quota} days off per month (unless set differently). The plan follows your rules and spreads days off evenly. Suggested days have an orange dashed border and are not saved until you approve.</div>`;
+ if(plan&&planInfo)h+=`<div class="warn good">${planInfo.count} days off suggested.</div>${planInfo.relaxed&&planInfo.relaxed.length?`<div class="warn">Not enough free preferred days, so some were placed on other days for: ${planInfo.relaxed.map(esc).join(', ')}</div>`:''}${planInfo.unres.length?`<div class="warn bad">Could not place all days off for: ${planInfo.unres.map(esc).join(', ')} (rules too tight).</div>`:''}`;
+ if(plan&&planInfo){
+  if(planInfo.trimmed&&planInfo.trimmed.length)h+=`<div class="warn">Removed extra future days off (over the monthly limit) for: ${planInfo.trimmed.map(esc).join(', ')}. Days already taken are kept.</div>`;
+  if(planInfo.capBroke.length)h+=`<div class="warn">Could not keep to max ${planInfo.cap} people off per day for: ${planInfo.capBroke.map(esc).join(', ')}.</div>`;
+  if(planInfo.gapBroke.length)h+=`<div class="warn">Days off are closer than ${DB.minGap} days apart for: ${planInfo.gapBroke.map(esc).join(', ')}.</div>`;
+  h+=`<div class="warn good" style="font-size:12px"><b>Edit the plan:</b> tap an empty cell to add a day off, tap a day off to remove it, or <b>press and hold a day off, then tap the new cell</b> (same worker or another) to move it. Then press Approve plan.</div>`;
+ }
+ h+=gridHTML(mon,plan,true,'main')+`</div>`;
+ h+=`<div class="card"><h3>Rule problems this month</h3>${v.length?v.map(x=>`<div class="warn ${x.soft?'':'bad'}">${dm(x.d)} (${DN[dow(x.d)]}): ${esc(x.t)}</div>`).join(''):'<div class="warn good">No problems ✓</div>'}</div>`;
+ const pubs=Object.keys(DB.pub).sort();
+ h+=`<div class="card"><h3>Public holidays</h3>
+ ${isAdmin()?`<div class="row"><input type="date" id="pd"><input id="pn" placeholder="Name (e.g. National Day)"><button class="b" onclick="addPub()">Add</button></div>`:''}
+ ${pubs.length?pubs.map(d=>`<div class="row"><span class="tag" style="background:${ST.F.col}">${d} (${DN[dow(d)].slice(0,3)})</span> ${esc(DB.pub[d])} ${isAdmin()?`<button class="b sm red" onclick="delPub('${d}')">Remove</button>`:''}</div>`).join(''):'<div class="leg">No public holidays added.</div>'}
+ <div class="leg">A public holiday marks everyone as PH on that date (no deduction). You can still change one person to Work.</div></div>`;
+ $('#v').innerHTML=h;
+}
+function addPub(){const d=$('#pd').value,n=$('#pn').value.trim()||'Holiday';if(!d)return toast('Pick a date');DB.pub[d]=n;save();render()}
+function delPub(d){delete DB.pub[d];save();render()}
+function doSuggest(){if(!active().length)return toast('Add workers first');const r=suggest(mon);plan=r.pl;planInfo=r;render()}
+function applyPlan(){Object.keys(plan).forEach(k=>{if(plan[k].s==='N')delete DB.att[k];else DB.att[k]=plan[k]});plan=null;mv=null;save();toast('Plan approved');render()}
+/* ---------- workers ---------- */
+const sh12=t=>{const[h,m]=t.split(':').map(Number);return `${h%12||12}:${pad(m)}`};
+const shortShift=s=>(s.group==='day'?'☀ ':'☾ ')+sh12(s.start);
+function setW(id,f,v){const w=DB.workers.find(x=>x.id===id);if(w){w[f]=v;save()}}
+function renameW(id,el){const w=DB.workers.find(x=>x.id===id),v=el.value.trim();if(v){w.name=v;save()}else el.value=w.name}
+function addW(){const n=($('#nw').value||'').trim();if(!n)return toast('Type a name first');DB.workers.push({id:uid(),name:n,role:DB.roles[0].id,shift:DB.shifts[0].id,wage:'',quota:'',phone:'',active:true});save();render()}
+function wRow(w){
+ const sep=isSep(w),r=roleOf(w),known=DB.roles.some(x=>x.id===w.role);
+ return `<div id="wr_${w.id}" class="wk2 ${w.active===false?'inact':''}" style="--c:${r.color||'#999'}"><input class="nm" value="${esc(w.name)}" onchange="renameW('${w.id}',this)">
+ <select class="ty2" onchange="if(this.value)pickW('${w.id}','role',this.value)">${known?'':'<option value="" selected>? choose type</option>'}${DB.roles.map(x=>`<option value="${x.id}" ${w.role===x.id?'selected':''}>${esc(x.name)}${x.sep?' · drivers list':''}</option>`).join('')}</select>
+ <input type="number" min="0" placeholder="AED" value="${w.wage??''}" onchange="setW('${w.id}','wage',this.value)">
+ <div class="chips s sf2">${sep?'<span class="leg" style="margin:0">drivers list — no shift</span>':DB.shifts.map(s=>`<button class="chip ${w.shift===s.id?'sel':''}" style="--c:${s.group==='day'?'#d97706':'#334155'}" title="${esc(s.name)}" onclick="pickW('${w.id}','shift','${s.id}')">${shortShift(s)}</button>`).join('')}</div>
+ <div class="bt2"><button class="b sm sec" title="More options" onclick="editWorker('${w.id}')">⋯</button><button class="b sm red" onclick="delWorker('${w.id}')">✕</button></div></div>`}
+function bulkAdd(){
+ const rid=$('#bulkRole').value,names=($('#bulk').value||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+ if(!names.length)return toast('Paste some names first');
+ let n=0;names.forEach(nm=>{if(!DB.workers.some(w=>w.name.toLowerCase()===nm.toLowerCase()&&w.role===rid)){DB.workers.push({id:uid(),name:nm,role:rid,shift:DB.shifts[0].id,wage:'',quota:'',phone:'',active:true});n++}});
+ save();render();toast(`${n} added`);
+}
+function pickW(id,f,v){setW(id,f,v);const w=DB.workers.find(x=>x.id===id),e=document.getElementById('wr_'+id);if(e&&w)e.outerHTML=wRow(w);else render()}
+function workersCard(){
+ const l=DB.workers;
+ return `<div class="card"><h3>Workers (${l.length}) — choose the type (Driver moves him to the Drivers page) and the shift</h3>
+ <div class="row"><input id="nw" placeholder="New worker name" onkeydown="if(event.key==='Enter')addW()"><button class="b" onclick="addW()">+ Add</button></div>
+ <div class="row"><textarea id="bulk" rows="2" placeholder="Add many at once: one name per line (e.g. the drivers)" style="flex:1;min-width:200px;font:inherit;border:1px solid var(--bd);border-radius:6px;padding:6px">${DB.workers.some(isSep)?'':'HABIB\nREHMAN\nMOUNIR\nMahboub\nABD ALRAHMAN\nRAZWAN\nHAMID\nALI'}</textarea><select id="bulkRole">${roleOpts((DB.roles.find(r=>r.sep)||DB.roles[0]).id)}</select><button class="b sec" onclick="bulkAdd()">Add all</button></div>
+ ${l.map(wRow).join('')||'<div class="warn">No workers yet — add a name above, or import your old sheet at the bottom.</div>'}
+ <div class="leg">☀ = day shift, ☾ = night shift (hover for the full name). ⋯ = more options (days off per month, phone, inactive).</div></div>`;
+}
+let wf={};
+function editWorker(id){
+ const w=id?DB.workers.find(x=>x.id===id):{role:DB.roles[0]?.id,shift:DB.shifts[0]?.id,active:true,quota:'',wage:''};
+ wf={role:w.role,shift:w.shift,active:w.active!==false};
+ modal(`<h3>${id?'Edit worker':'Add worker'}</h3><div class="fl">
+ <label>Name<input id="wn" value="${esc(w.name||'')}"></label>
+ <label>Type<div class="chips" id="wrc"></div></label>
+ <label>Shift<div class="chips" id="wsc"></div></label>
+ <label>Daily wage (AED) — used for deductions<input id="ww" type="number" min="0" value="${w.wage??''}"></label>
+ <label>Days off per month (empty = default ${DB.quota})<input id="wq" type="number" min="0" value="${w.quota??''}"></label>
+ <label>Phone (optional)<input id="wp" value="${esc(w.phone||'')}"></label>
+ <label>Status<div class="chips" id="wac"></div></label></div>
+ <div class="row" style="margin-top:12px"><button class="b" onclick="saveWorker('${id||''}')">Save</button><button class="b sec" onclick="closeM()">Cancel</button></div>`);
+ drawChips();
+}
+function drawChips(){
+ $('#wrc').innerHTML=DB.roles.map(r=>`<button class="chip ${wf.role===r.id?'sel':''}" style="--c:${r.color}" onclick="wf.role='${r.id}';drawChips()">${esc(r.name)}</button>`).join('');
+ $('#wsc').innerHTML=DB.shifts.map(s=>`<button class="chip ${wf.shift===s.id?'sel':''}" style="--c:${s.group==='day'?'#d97706':'#334155'}" onclick="wf.shift='${s.id}';drawChips()">${esc(s.name)}</button>`).join('');
+ $('#wac').innerHTML=`<button class="chip ${wf.active?'sel':''}" style="--c:#2e7d32" onclick="wf.active=true;drawChips()">Active</button><button class="chip ${!wf.active?'sel':''}" style="--c:#777" onclick="wf.active=false;drawChips()">Inactive</button>`;
+}
+function saveWorker(id){
+ const name=$('#wn').value.trim();if(!name)return toast('Enter a name');
+ const o={name,role:wf.role,shift:wf.shift,wage:$('#ww').value,quota:$('#wq').value,phone:$('#wp').value.trim(),active:wf.active};
+ if(id)Object.assign(DB.workers.find(x=>x.id===id),o);else DB.workers.push({id:uid(),...o});
+ save();closeM();render();
+}
+function delWorker(id){const w=DB.workers.find(x=>x.id===id);if(!confirm(`Delete ${w.name} and all their records? (To keep records, set them Inactive instead.)`))return;
+ DB.workers=DB.workers.filter(x=>x.id!==id);Object.keys(DB.att).forEach(k=>{if(k.endsWith('|'+id))delete DB.att[k]});save();render()}
+/* ---------- report ---------- */
+function repData(){
+ const[y,m]=mon.split('-').map(Number);
+ const f=rf||mon+'-01',t=rt||fmt(y,m,dim(y,m));
+ const dates=[];for(let d=new Date(f+'T00:00:00');d<=new Date(t+'T00:00:00');d.setDate(d.getDate()+1))dates.push(fmt(d.getFullYear(),d.getMonth()+1,d.getDate()));
+ const rows=fWorkers('all').map(w=>{
+  const c={N:0,W:0,L:0,A:0,P:0,H:0,F:0};dates.forEach(d=>{const st=stOf(d,w.id);if(d>todayS()&&st==='N')return;c[st]++});
+  const wage=Number(w.wage)||0;
+  const ded=c.L*DB.lateFee+c.A*DB.absentDays*wage+c.P*DB.approvedDays*wage;
+  const hrs=Math.round(dates.reduce((q,d)=>q+(drvHours(DB.att[key(d,w.id)])||0),0)*10)/10;
+  return{w,c,wage,ded,hrs};
+ });
+ return{f,t,rows};
+}
+function vRep(){
+ const r=repData();rf=r.f;rt=r.t;
+ const tot=k=>r.rows.reduce((a,x)=>a+x.c[k],0),adm=isAdmin();
+ const totDed=r.rows.reduce((a,x)=>a+x.ded,0);
+ const top=r.rows.filter(x=>x.c.L>0).sort((a,b)=>b.c.L-a.c.L).slice(0,3);
+ const nowage=r.rows.filter(x=>!x.wage&&(x.c.A||x.c.P)).map(x=>x.w.name);
+ $('#v').innerHTML=`<div class="card noprint"><h3>Final monthly sheet (to hand in)</h3><div class="row"><input type="month" value="${mon}" onchange="mon=this.value;rf=null;rt=null;render()"><select onchange="filt.role=this.value;render()">${roleOpts(filt.role,1)}</select><select onchange="filt.shift=this.value;render()">${shiftOpts(filt.shift,1)}</select><button class="b" onclick="monthPDF()">Download PDF</button><button class="b" onclick="monthXLSX()">Download Excel</button></div><div class="leg">Full month, one row per worker, colored by status${adm?', with deductions':''}. Leave the filters on "All" for the complete sheet.</div></div>
+ <div class="row noprint"><label>From <input type="date" value="${r.f}" onchange="rf=this.value;render()"></label><label>To <input type="date" value="${r.t}" onchange="rt=this.value;render()"></label>
+ <select onchange="filt.role=this.value;render()">${roleOpts(filt.role,1)}</select><select onchange="filt.shift=this.value;render()">${shiftOpts(filt.shift,1)}</select>
+ <button class="b sec" onclick="rf=null;rt=null;render()">This month</button><button class="b" onclick="exportReport()">Export Excel</button><button class="b sec" onclick="print()">Print</button></div>
+ <div class="cards"><div class="k"><b>${tot('L')}</b><span>Late</span></div><div class="k"><b>${tot('A')}</b><span>Absent</span></div><div class="k"><b>${tot('P')}</b><span>Approved</span></div><div class="k"><b>${tot('H')}</b><span>Days off</span></div>${adm?`<div class="k"><b>${totDed.toLocaleString()}</b><span>Total deductions (AED)</span></div>`:''}</div>
+ ${top.length?`<div class="warn"><b>Most late:</b> ${top.map(x=>`${esc(x.w.name)} (${x.c.L})`).join(', ')}</div>`:''}
+ ${adm&&nowage.length?`<div class="warn bad">Daily wage is not set for: ${nowage.map(esc).join(', ')} — their absence deductions show 0.</div>`:''}
+ <div class="card"><h3>Attendance report ${r.f} → ${r.t}</h3><div class="tw"><table><tr><th class="l">Worker</th><th>Type</th><th>Shift</th><th>Worked days</th>${r.rows.some(x=>isSep(x.w))?'<th>Hours</th>':''}<th>Late</th><th>Absent</th><th>Approved</th><th>Day off</th><th>Public hol.</th><th>Not marked</th>${adm?'<th>Deduction (AED)</th>':''}</tr>
+ ${r.rows.map(x=>`<tr><td class="l">${esc(x.w.name)}</td><td>${roleTag(x.w)}</td><td>${esc(shiftOf(x.w).name)}</td><td>${x.c.W+x.c.L}</td>${r.rows.some(y=>isSep(y.w))?`<td>${isSep(x.w)?(x.hrs||''):''}</td>`:''}<td>${x.c.L||''}</td><td>${x.c.A||''}</td><td>${x.c.P||''}</td><td>${x.c.H||''}</td><td>${x.c.F||''}</td><td>${x.c.N||''}</td>${adm?`<td><b>${x.ded||''}</b></td>`:''}</tr>`).join('')}</table></div>
+ ${adm?`<div class="leg">Deduction = Late × ${DB.lateFee} AED + Absent × ${DB.absentDays} × daily wage + Approved × ${DB.approvedDays} × daily wage.</div>`:''}</div>`+drvReportCard();
+}
+function exportReport(){
+ const r=repData(),adm=isAdmin();
+ const head=['Worker','Type','Shift','Worked days','Late','Absent','Approved','Day off','Public holiday','Not marked','Hours (drivers)'];if(adm)head.push('Daily wage','Deduction (AED)');
+ const aoa=[head,...r.rows.map(x=>{const a=[x.w.name,roleOf(x.w).name,shiftOf(x.w).name,x.c.W+x.c.L,x.c.L,x.c.A,x.c.P,x.c.H,x.c.F,x.c.N,isSep(x.w)?x.hrs:''];if(adm)a.push(x.wage,x.ded);return a})];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'Report');
+ XLSX.writeFile(wb,`attendance_report_${r.f}_${r.t}.xlsx`);
+}
+/* ---------- printable sheets (PDF / Excel): dates down the left, workers across ---------- */
+const CODE={N:'',W:'W',L:'L',A:'A',P:'AP',H:'OFF',F:'PH'};
+const FILLHEX={N:'FFFFFF',W:'E6F6EC',L:'FFF2CC',A:'FBD5D5',P:'FDE2CF',H:'D9E8FB',F:'E8E1F5'};
+const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const hexRGB=h=>[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+const dayLabel=d=>`${Number(d.slice(8))} ${DN[dow(d)].slice(0,3)}`;
+function monthData(mo,mode,who){
+ mode=mode||'att';who=who||'main';
+ const[y,m]=mo.split('-').map(Number),dates=monthDates(mo),adm=isAdmin();
+ const cols=fWorkers(who).map(w=>{
+  const c={N:0,W:0,L:0,A:0,P:0,H:0,F:0};
+  const codes=dates.map(d=>{let st=stOf(d,w.id,mode==='plan'?plan:null);if(mode==='plan'&&st!=='H'&&st!=='F')st='N';c[st]++;return st});
+  const hl=dates.map(d=>who==='sep'&&mode!=='plan'?drvHours(DB.att[key(d,w.id)]):null),hrs=Math.round(hl.reduce((q,v)=>q+(v||0),0)*10)/10;
+  const wage=Number(w.wage)||0;
+  return{w,codes,hl,hrs,c,wage,quota:quotaOf(w),ded:c.L*DB.lateFee+c.A*DB.absentDays*wage+c.P*DB.approvedDays*wage};
+ });
+ const off=dates.map((d,i)=>cols.filter(x=>x.codes[i]==='H').length);
+ const rowsT=mode==='plan'?[['Days off',x=>x.c.H],['Per month',x=>x.quota]]
+  :[...(who==='sep'?[['Hours',x=>x.hrs]]:[]),['Present',x=>x.c.W+x.c.L],['Late',x=>x.c.L],['Absent',x=>x.c.A],['Approved',x=>x.c.P],['Day off',x=>x.c.H],['Public hol.',x=>x.c.F],['Not marked',x=>x.c.N],...(adm?[['Daily wage',x=>x.wage],['Deduction AED',x=>x.ded]]:[])];
+ const base=mode==='plan'?'Days-off schedule':'Attendance sheet';
+ return{mode,who,dates,cols,off,adm,rowsT,title:new Date(y,m-1,1).toLocaleString('en',{month:'long',year:'numeric'}),sub:who==='sep'?'Drivers - '+base.toLowerCase():base};
+}
+/* all sheets of a report: main staff, then drivers (attendance only) */
+function monthSheets(mo,mode,only){
+ const L=only==='sep'?[]:[monthData(mo,mode,'main')];
+ if(mode!=='plan'){const d=monthData(mo,mode,'sep');if(d.cols.length)L.push(d)}
+ return L.filter(D=>D.cols.length);
+}
+const blend=(c,a)=>c.slice(1).match(/../g).map(h=>Math.round(255-(255-parseInt(h,16))*a).toString(16).padStart(2,'0')).join('').toUpperCase();
+const PF={W:'D3EEDC',L:'FFE699',A:'F4A6A6',P:'F8C8A0',H:'A9CBF3',F:'D9CEF0'};
+const dim2=(h,k)=>h.match(/../g).map(x=>Math.round(parseInt(x,16)*k).toString(16).padStart(2,'0')).join('').toUpperCase();
+const cellHex=(x,st,ri)=>{if(st==='N'){const b=blend(roleOf(x.w).color,.22);return ri%2?dim2(b,.92):b}return PF[st]};
+const dateHex=(d,ri)=>DB.pub[d]?'D9CEF0':DB.pressureDays.includes(dow(d))?'FBD9A8':(ri%2?'DDE2E9':'EEF1F5');
+const TXT={W:[30,110,60],L:[130,90,0],A:[160,20,20],P:[170,70,10],H:[20,60,150],F:[90,60,150]};
+const cellTxt=(x,i)=>x.hl&&x.hl[i]!=null?String(x.hl[i]):CODE[x.codes[i]];
+const legendTxt=mode=>mode==='plan'
+ ?`OFF = Day off · PH = Public holiday · orange date = busy day · purple date = public holiday`
+ :`W = Present · L = Late (${DB.lateFee} AED) · A = Absent, no approval (${DB.absentDays} days wage) · AP = Approved absence (${DB.approvedDays} day wage) · OFF = Day off · PH = Public holiday · blank = not marked · numbers on the Drivers sheet = hours worked (order time included)`;
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);if(a.remove)a.remove()},800)}
+const fileBase=(mode,only)=>(mode==='plan'?'days-off_':only==='sep'?'drivers_':'attendance_')+mon;
+async function monthXLSX(mode,only){try{await monthXLSXPretty(mode,only)}catch(e){console.error(e);toast('Colored Excel failed, saved a plain version');monthXLSXPlain(mode,only)}}
+function buildSheet(wb,D,name){
+ const cnt=D.cols.length,n=D.dates.length;
+ const ws=wb.addWorksheet(name.slice(0,31),{pageSetup:{paperSize:9,orientation:cnt>40?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
+ const last=cnt+2,bd={style:'thin',color:{argb:'FF000000'}},border={top:bd,left:bd,bottom:bd,right:bd};
+ const solid=h=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+h}});
+ ws.mergeCells(1,1,1,last+1);const t=ws.getCell(1,1);t.value=`IAT Trading — ${D.sub} — ${D.title}`;t.font={bold:true,size:14};
+ ws.mergeCells(2,1,2,last+1);const lg=ws.getCell(2,1);lg.value=legendTxt(D.mode);lg.font={size:9,color:{argb:'FF555555'}};
+ ws.getRow(4).height=95;
+ const hc=(col,text,color)=>{const c=ws.getRow(4).getCell(col);c.value=text;c.font={bold:true,size:9,color:{argb:'FFFFFFFF'}};c.fill=solid(color);c.alignment={textRotation:col===1?0:90,horizontal:'center',vertical:col===1?'middle':'bottom'};c.border=border};
+ hc(1,'Date','0F6CBD');D.cols.forEach((x,i)=>hc(2+i,x.w.name,roleOf(x.w).color.slice(1).toUpperCase()));hc(last,'People off','0F6CBD');hc(last+1,'Date','0F6CBD');
+ D.dates.forEach((d,i)=>{
+  const row=ws.getRow(5+i),wd=dow(d);
+  const a=row.getCell(1);a.value=dayLabel(d);a.font={bold:true,size:9};a.border=border;a.fill=solid(dateHex(d,i));const a2=row.getCell(last+1);a2.value=dayLabel(d);a2.font={bold:true,size:9};a2.border=border;a2.fill=solid(dateHex(d,i));
+  D.cols.forEach((x,j)=>{const c=row.getCell(2+j),st=x.codes[i];c.value=cellTxt(x,i)||null;c.fill=solid(cellHex(x,st,i));c.border=border;c.font={size:8,bold:st!=='N',color:{argb:'FF'+(TXT[st]?TXT[st].map(v=>v.toString(16).padStart(2,'0')).join(''):'000000')}};c.alignment={horizontal:'center',vertical:'middle'}});
+  const o=row.getCell(last);o.value=D.off[i]||null;o.border=border;o.font={bold:true,size:9};o.alignment={horizontal:'center'};
+ });
+ D.rowsT.forEach(([lb,f],k)=>{
+  const row=ws.getRow(5+n+k);
+  const a=row.getCell(1);a.value=lb;a.font={bold:true,size:9};a.fill=solid('EEF2F6');a.border=border;const a2=row.getCell(last+1);a2.value=lb;a2.font={bold:true,size:9};a2.fill=solid('EEF2F6');a2.border=border;
+  D.cols.forEach((x,j)=>{const c=row.getCell(2+j),v=f(x);c.value=v||null;c.font={bold:true,size:8};c.fill=solid('F8FAFC');c.border=border;c.alignment={horizontal:'center'}});
+  if(lb==='Deduction AED'){const c=row.getCell(last);c.value=D.cols.reduce((q,x)=>q+x.ded,0);c.font={bold:true,size:10};c.border=border;c.alignment={horizontal:'center'}}
+ });
+ const sr=5+n+D.rowsT.length+2;
+ ws.getCell(sr,1).value='Prepared by: ______________';ws.getCell(sr,Math.min(8,last)).value='Approved by: ______________';ws.getCell(sr,Math.min(18,last)).value='Date: ___________';
+ ws.getColumn(1).width=13;for(let i=0;i<cnt;i++)ws.getColumn(2+i).width=4.4;ws.getColumn(last).width=9;ws.getColumn(last+1).width=13;
+ ws.views=[{state:'frozen',xSplit:1,ySplit:4}];
+}
+async function monthXLSXPretty(mode,only){
+ if(!window.ExcelJS)return monthXLSXPlain(mode,only);
+ const L=monthSheets(mon,mode,only);
+ if(!L.length)return toast('No workers to export');
+ const wb=new ExcelJS.Workbook();
+ L.forEach(D=>buildSheet(wb,D,D.who==='sep'?'Drivers':D.title));
+ const buf=await wb.xlsx.writeBuffer();
+ dl(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fileBase(mode,only)+'.xlsx');
+}
+function monthXLSXPlain(mode,only){
+ if(!window.XLSX)return toast('Excel library not loaded — check the internet connection');
+ const L=monthSheets(mon,mode,only);
+ if(!L.length)return toast('No workers to export');
+ const wb=XLSX.utils.book_new();
+ L.forEach(D=>{
+  const aoa=[[`IAT Trading — ${D.sub} — ${D.title}`],[legendTxt(D.mode)],[],['Date',...D.cols.map(x=>x.w.name),'People off']];
+  D.dates.forEach((d,i)=>aoa.push([dayLabel(d),...D.cols.map(x=>cellTxt(x,i)),D.off[i]||'']));
+  D.rowsT.forEach(([lb,f])=>aoa.push([lb,...D.cols.map(x=>f(x)||'')]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),D.who==='sep'?'Drivers':D.title.slice(0,31));
+ });
+ XLSX.writeFile(wb,fileBase(mode,only)+'.xlsx');
+}
+function pdfSheet(doc,D){
+ const cnt=D.cols.length,n=D.dates.length,land=cnt>40;
+ const PW=land?297:210,PH=land?210:297,M=8;
+ doc.setFontSize(13);doc.setTextColor(20);doc.text(`IAT Trading - ${D.sub} - ${D.title}`,M,M+4);
+ doc.setFontSize(6.5);doc.text(legendTxt(D.mode).replace(/·/g,'|'),M,M+8.5);
+ const T=D.rowsT.length,headH=land?26:30,footH=14,top=M+11;
+ const rh=Math.min(6.5,(PH-top-M-headH-footH)/(n+T));
+ const fs=Math.min(8,Math.max(3.8,rh*1.55)),pad=Math.max(0.1,(rh-fs*0.41)/2);
+ const dateW=land?16:15,offW=7,wkW=(PW-2*M-2*dateW-offW)/cnt;
+ const head=[['Date',...D.cols.map(()=>''),'Off','Date']];
+ const body=D.dates.map((d,i)=>[dayLabel(d),...D.cols.map(x=>cellTxt(x,i)),D.off[i]||'',dayLabel(d)]);
+ D.rowsT.forEach(([lb,f])=>body.push([lb,...D.cols.map(x=>f(x)||''),'',lb]));
+ const cs={0:{cellWidth:dateW,halign:'left'}};D.cols.forEach((_,i)=>cs[1+i]={cellWidth:wkW});cs[1+cnt]={cellWidth:offW};cs[2+cnt]={cellWidth:dateW,halign:'left'};
+ doc.autoTable({head,body,startY:top,theme:'grid',margin:{left:M,right:M,top:M,bottom:M},
+  styles:{fontSize:fs,cellPadding:{top:pad,bottom:pad,left:0.15,right:0.15},halign:'center',valign:'middle',lineWidth:0.15,lineColor:[0,0,0],overflow:'hidden',minCellHeight:rh,textColor:20},
+  headStyles:{fillColor:[222,230,240],textColor:20,minCellHeight:headH,fontSize:fs,lineWidth:0.2,lineColor:[0,0,0]},columnStyles:cs,
+  didParseCell(hk){
+   if(hk.section!=='body')return;
+   const ri=hk.row.index,ci=hk.column.index;
+   if(ri<n){
+    if(ci===0||ci===cnt+2){const d=D.dates[ri];hk.cell.styles.fontStyle='bold';hk.cell.styles.fillColor=hexRGB(dateHex(d,ri))}
+    else if(ci===cnt+1){hk.cell.styles.fontStyle='bold';hk.cell.styles.fillColor=ri%2?[225,229,236]:[238,241,245]}
+    else{const x=D.cols[ci-1],st=x.codes[ri];hk.cell.styles.fillColor=hexRGB(cellHex(x,st,ri));if(st!=='N'){hk.cell.styles.fontStyle='bold';if(TXT[st])hk.cell.styles.textColor=TXT[st]}}
+   }else{hk.cell.styles.fillColor=[232,237,243];hk.cell.styles.fontStyle='bold'}
+  },
+  didDrawCell(hk){
+   if(hk.section==='body'&&hk.row.index<n&&hk.column.index>=1&&hk.column.index<=cnt){
+    const x=D.cols[hk.column.index-1],day=String(Number(D.dates[hk.row.index].slice(8))),has=!!cellTxt(x,hk.row.index);
+    doc.setTextColor(has?110:170,has?110:170,has?110:170);
+    if(has){doc.setFontSize(Math.max(2.4,fs*0.5));doc.text(day,hk.cell.x+0.25,hk.cell.y+Math.max(1,fs*0.17))}
+    else{doc.setFontSize(Math.max(2.8,fs*0.85));doc.text(day,hk.cell.x+hk.cell.width/2,hk.cell.y+hk.cell.height/2+fs*0.12,{align:'center'})}
+    doc.setTextColor(20);return;
+   }
+   if(hk.section!=='head'||hk.column.index<1||hk.column.index>cnt)return;
+   const x=D.cols[hk.column.index-1];
+   doc.setFillColor(...hex2rgb(roleOf(x.w).color));doc.rect(hk.cell.x,hk.cell.y,hk.cell.width,1.2,'F');
+   doc.setFontSize(Math.min(fs,7));doc.setTextColor(20);
+   let nm=x.w.name;const maxW=headH-4;while(nm.length>3&&doc.getTextWidth(nm)>maxW)nm=nm.slice(0,-1);
+   doc.text(nm,hk.cell.x+hk.cell.width/2+doc.getFontSize()*0.125,hk.cell.y+hk.cell.height-1.5,{angle:90});
+  }});
+ let y=doc.lastAutoTable.finalY+5;
+ if(D.adm&&D.mode==='att'){doc.setFontSize(8);doc.text(`Total deductions: ${D.cols.reduce((a,x)=>a+x.ded,0).toLocaleString()} AED`,M,y);y+=5}
+ if(y>PH-M-6){doc.addPage();y=M+6}
+ doc.setFontSize(8);doc.text('Prepared by: ____________________',M,y);doc.text('Approved by: ____________________',PW/2-20,y);doc.text('Date: ____________',PW-50,y);
+}
+function monthPDF(mode,only){
+ if(!window.jspdf)return toast('PDF library not loaded — check the internet connection');
+ const L=monthSheets(mon,mode,only);
+ if(!L.length)return toast('No workers to print');
+ const{jsPDF}=window.jspdf;
+ const doc=new jsPDF({orientation:L[0].cols.length>40?'landscape':'portrait',unit:'mm',format:'a4'});
+ L.forEach((D,i)=>{if(i)doc.addPage('a4',D.cols.length>40?'landscape':'portrait');pdfSheet(doc,D)});
+ doc.save(fileBase(mode,only)+'.pdf');
+}
+/* ---------- settings ---------- */
+function vSet(){
+ $('#v').innerHTML=workersCard()+`
+ <div class="card"><h3>Deductions</h3><div class="row">
+ <label>Late (AED per time) <input type="number" min="0" style="width:80px" value="${DB.lateFee}" onchange="DB.lateFee=Number(this.value);save()"></label>
+ <label>Absent, no approval (days of wage) <input type="number" min="0" step="0.5" style="width:80px" value="${DB.absentDays}" onchange="DB.absentDays=Number(this.value);save()"></label>
+ <label>Absent, approved (days of wage) <input type="number" min="0" step="0.5" style="width:80px" value="${DB.approvedDays}" onchange="DB.approvedDays=Number(this.value);save()"></label></div></div>
+  <div class="card"><h3>Worker types — order = priority on every sheet</h3>
+ ${DB.roles.map((r,i)=>`<div class="rc" style="--c:${r.color}">
+  <div class="rr"><b>#${i+1}</b><button class="b sm sec" ${i?'':'disabled'} onclick="moveRole(${i},-1)">▲</button><button class="b sm sec" ${i<DB.roles.length-1?'':'disabled'} onclick="moveRole(${i},1)">▼</button><input type="color" value="${r.color}" onchange="DB.roles[${i}].color=this.value;save()"><input value="${esc(r.name)}" style="font-weight:700;width:150px" onchange="DB.roles[${i}].name=this.value;save()"><label><input type="checkbox" ${r.sep?'checked':''} onchange="DB.roles[${i}].sep=this.checked;save();render()"> Separate list (own table, not in days-off planner)</label><button class="b sm red" onclick="delRole(${i})">Delete type</button></div>
+  <div class="rr"><label>Max off on the same day <select onchange="DB.roles[${i}].maxOff=Number(this.value);save()">${[0,1,2,3].map(n=>`<option value="${n}" ${r.maxOff===n?'selected':''}>${n===0?'No limit':n}</option>`).join('')}</select></label>
+   <label><input type="checkbox" ${r.perGroup?'checked':''} onchange="DB.roles[${i}].perGroup=this.checked;save()"> Count day &amp; night separately</label>
+   <label><input type="checkbox" ${r.strict?'checked':''} onchange="DB.roles[${i}].strict=this.checked;save()"> Only on preferred days</label></div>
+  <div class="rr"><span class="lb">Preferred days off — DAY shift:</span><span style="white-space:nowrap">${dayTog(i,'prefDay')}</span><span class="lb">NIGHT shift:</span><span style="white-space:nowrap">${dayTog(i,'prefNight')}</span></div></div>`).join('')}
+ <div class="row" style="margin-top:8px"><button class="b sec" onclick="addRole()">+ New type</button></div>
+ <div class="leg"><b>Order</b>: the first type is listed first in Today and in every sheet (Supervisor, then Cutter, …). <b>Max off on the same day</b>: 1 means two workers of this type are never off together. <b>Preferred days</b>: the planner puts days off on those days (empty = no preference, busy days are avoided). <b>Separate list</b>: shown in its own table (Drivers) and included in reports, but never planned by the days-off planner.</div></div>
+ <div class="card"><h3>General</h3><div class="fl">
+ <label>Busy days (orange columns — types without preferred days avoid them)<span class="chips">${DN.map((n,i)=>`<label style="margin-right:8px;color:var(--tx)"><input type="checkbox" ${DB.pressureDays.includes(i)?'checked':''} onchange="togP(${i},this.checked)"> ${n.slice(0,3)}</label>`).join('')}</span></label>
+ <label>Default days off per worker per month<input type="number" min="0" style="width:90px" value="${DB.quota}" onchange="DB.quota=Number(this.value);save()"></label>
+ <label>Max people off at once in the same shift period (0 = no limit)<input type="number" min="0" style="width:90px" value="${DB.maxOffPerGroup}" onchange="DB.maxOffPerGroup=Number(this.value);save()"></label>
+ <label>Max people off on the same day, all types (0 = automatic, spreads evenly)<input type="number" min="0" style="width:90px" value="${DB.maxOffDay}" onchange="DB.maxOffDay=Number(this.value);save()"></label>
+ <label>Minimum days between one worker's days off<input type="number" min="0" style="width:90px" value="${DB.minGap}" onchange="DB.minGap=Number(this.value);save()"></label>
+ <label>Driver leaves with an order: hours added to his shift<input type="number" min="0" step="0.25" style="width:90px" value="${DB.orderHrs}" onchange="DB.orderHrs=Number(this.value);save()"></label></div></div>
+ <div class="card"><h3>Shifts (12 hours each)</h3><div class="tw"><table><tr><th>Name</th><th>Start</th><th>Period</th></tr>
+ ${DB.shifts.map((s,i)=>`<tr><td><input value="${esc(s.name)}" onchange="DB.shifts[${i}].name=this.value;save()"></td><td><input type="time" value="${s.start}" onchange="DB.shifts[${i}].start=this.value;save()"></td><td><select onchange="DB.shifts[${i}].group=this.value;save()"><option value="day" ${s.group==='day'?'selected':''}>Day</option><option value="night" ${s.group==='night'?'selected':''}>Night</option></select></td></tr>`).join('')}</table></div></div>
+ <div class="card"><h3>Users</h3><div class="tw"><table><tr><th>Name</th><th>PIN</th><th>Access</th><th></th></tr>
+ ${DB.users.map((u,i)=>`<tr><td><input value="${esc(u.name)}" onchange="DB.users[${i}].name=this.value;save()"></td><td><input value="${esc(u.pin)}" style="width:90px" onchange="DB.users[${i}].pin=this.value;save()"></td><td><select onchange="DB.users[${i}].role=this.value;save()"><option value="admin" ${u.role==='admin'?'selected':''}>Manager</option><option value="sup" ${u.role!=='admin'?'selected':''}>Supervisor</option></select></td><td><button class="b sm red" onclick="delUser(${i})">Delete</button></td></tr>`).join('')}</table></div>
+ <div class="row" style="margin-top:8px"><button class="b sec" onclick="addUser()">+ Add user</button></div>
+ <div class="leg">Supervisors can mark attendance and view the planner and report (without wages or deductions). Change the PINs here: they sync to the other phones through OneDrive. The PIN only controls what each person sees in the app — it is not real security, so connect OneDrive only on phones you trust.</div></div>
+ <div class="card"><h3>Backup and import</h3><div class="row"><button class="b" onclick="exportAll()">Export all data (Excel backup)</button>
+ <label class="b sec" style="cursor:pointer">Restore backup<input type="file" accept=".xlsx" hidden onchange="importBackup(this.files[0])"></label></div>
+ <div class="row"><b>Import old attendance sheet (like ATT SEP2026):</b><input type="month" id="om" value="${mon}"><label class="b sec" style="cursor:pointer">Choose file<input type="file" accept=".xlsx" hidden onchange="importOld(this.files[0])"></label></div>
+ <div class="leg">Old sheet: "Holiday" and "W/OFF" become Day off, "LATE" becomes Late, "Absent" becomes Absent. Data is saved in this browser — export a backup regularly.</div></div>`;
+}
+function dayTog(i,f){return [1,2,3,4,5,6,0].map(d=>`<button class="dt ${(DB.roles[i][f]||[]).includes(d)?'on':''}" title="${DN[d]}" onclick="togPref(${i},'${f}',${d})">${DN[d].slice(0,2)}</button>`).join('')}
+function togPref(i,f,d){const a=DB.roles[i][f]||[];DB.roles[i][f]=a.includes(d)?a.filter(x=>x!==d):[...a,d];save();render()}
+function moveRole(i,d){const j=i+d;if(j<0||j>=DB.roles.length)return;[DB.roles[i],DB.roles[j]]=[DB.roles[j],DB.roles[i]];save();render()}
+function togP(i,c){DB.pressureDays=DB.pressureDays.filter(x=>x!==i);if(c)DB.pressureDays.push(i);save()}
+function addRole(){const n=prompt('New type name');if(n){DB.roles.push({id:'r'+Date.now(),name:n,color:'#'+Math.floor(Math.random()*0xaaaaaa+0x333333).toString(16).padStart(6,'0'),maxOff:0,perGroup:false,prefDay:[],prefNight:[],strict:false});save();render()}}
+function delRole(i){const r=DB.roles[i];if(DB.workers.some(w=>w.role===r.id))return toast('Workers still use this type');DB.roles.splice(i,1);save();render()}
+function addUser(){const n=prompt('Supervisor name');if(n){DB.users.push({id:'u'+Date.now(),name:n,pin:'0000',role:'sup'});save();render()}}
+function delUser(i){if(DB.users[i].id===me.id)return toast("You can't delete yourself");DB.users.splice(i,1);save();render()}
+function exportAll(){
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Name','Type','Shift','Daily wage','Days off/month','Phone','Active'],...DB.workers.map(w=>[w.name,roleOf(w).name,shiftOf(w).name,w.wage||'',w.quota,w.phone||'',w.active===false?'No':'Yes'])]),'Workers');
+ const rows=[['Date','Worker','Status','Note']];
+ Object.keys(DB.att).sort().forEach(k=>{const[d,id]=k.split('|'),w=DB.workers.find(x=>x.id===id);if(w){const a=DB.att[k];rows.push([d,w.name,ST[a.s].l,a.n||''])}});
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Attendance');
+ const js=JSON.stringify(DB),parts=[];for(let i=0;i<js.length;i+=30000)parts.push([js.slice(i,i+30000)]);
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(parts),'Config');
+ XLSX.writeFile(wb,`iat_attendance_backup_${todayS()}.xlsx`);
+}
+async function importBackup(f){
+ if(!f)return;const wb=XLSX.read(await f.arrayBuffer());const sh=wb.Sheets['Config'];if(!sh)return toast('Not a backup file from this app');
+ try{const js=XLSX.utils.sheet_to_json(sh,{header:1}).map(r=>r[0]).join('');const x=JSON.parse(js);if(!confirm('Replace ALL current data with this backup?'))return;DB=Object.assign(clone(DEF),x);save();me=DB.users.find(u=>u.id===me.id)||DB.users[0];toast('Backup restored');render()}catch(e){toast('File is damaged')}
+}
+async function importOld(f){
+ if(!f)return;const mo=$('#om').value;if(!mo)return toast('Pick the month first');
+ const[y,m]=mo.split('-').map(Number);
+ const wb=XLSX.read(await f.arrayBuffer());const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+ const hdr=rows[0]||[];const cols=[];let c=2;while(c<hdr.length&&String(hdr[c]).trim()){cols.push(c);c++}
+ if(!cols.length)return toast('Could not read names from the first row');
+ const typ=rows[1]||[];const map={work:'W',late:'L',absent:'A',holiday:'H','w/off':'H'};
+ const idx={};
+ cols.forEach(ci=>{const name=String(hdr[ci]).trim();
+  const want=/driver/i.test(String(typ[ci]))?'driver':'worker';
+  const rid=DB.roles.find(r=>r.id===want)?want:DB.roles[0].id;
+  let w=DB.workers.find(x=>x.name.toLowerCase()===name.toLowerCase()&&x.role===rid);
+  if(!w){w={id:uid(),name,role:rid,shift:DB.shifts[0].id,wage:'',quota:'',phone:'',active:true};DB.workers.push(w)}idx[ci]=w.id});
+ let n=0;
+ rows.slice(2).forEach(r=>{let d=null;for(let i=c;i<r.length;i++){const mm=String(r[i]).match(/(\d{1,2})-[A-Za-z]{3}/);if(mm){d=Number(mm[1]);break}}
+  if(!d)return;const dt=fmt(y,m,d);
+  cols.forEach(ci=>{const st=map[String(r[ci]).trim().toLowerCase()];if(st){DB.att[key(dt,idx[ci])]={s:st};n++}})});
+ save();toast(`Imported ${cols.length} workers and ${n} records`);mon=mo;render();
+}
+/* ================= ONEDRIVE SYNC (Microsoft Graph) + JSON backup =================
+   Put your Azure "Application (client) ID" below. Empty = local-only mode.
+   The whole app data is kept in ONE JSON file on OneDrive: IAT-Attendance/attendance.json */
+const OD={clientId:"",authority:"https://login.microsoftonline.com/common",path:"IAT-Attendance/attendance.json",pollMs:45000};
+const ODON=!!OD.clientId;
+const _renderLogin=renderLogin,_logout=logout,_vSet=vSet,_save=save;
+const stab=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
+let odApp=null,odAcct=null,odEtag=null,odBase=null,odBusy=false,odTimer=null,odMsg='',odAgain=false;
+const GR='https://graph.microsoft.com/v1.0/me/drive/root:/'+OD.path;
+function normDB(x){const d=Object.assign(clone(DEF),x||{});fixRoles(d);return d}
+function odChip(t,bad){
+ odMsg=t;let e=null;try{e=document.getElementById('odst')}catch(x){}
+ if(!e){try{e=document.createElement('div');e.id='odst';e.onclick=()=>{if(ODON&&!odAcct)odConnect();else odSync(true)};e.style.cssText='position:fixed;left:8px;bottom:8px;z-index:50;font-size:12px;padding:4px 10px;border-radius:14px;background:#fff;border:1px solid #cbd5e1;box-shadow:0 1px 4px #0002;cursor:pointer';document.body.appendChild(e)}catch(x){return}}
+ e.textContent='☁ '+t;e.style.color=bad?'#b91c1c':'#334155';
+}
+async function odToken(interactive){
+ const req={scopes:['Files.ReadWrite'],account:odAcct};
+ try{return (await odApp.acquireTokenSilent(req)).accessToken}
+ catch(e){if(!interactive)throw e;return (await odApp.acquireTokenPopup(req)).accessToken}
+}
+async function odMeta(tok){
+ const r=await fetch(GR,{headers:{Authorization:'Bearer '+tok}});
+ if(r.status===404)return null;if(!r.ok)throw new Error('meta '+r.status);
+ const j=await r.json();return{eTag:j.eTag}
+}
+async function odGet(tok){
+ const r=await fetch(GR+':/content',{headers:{Authorization:'Bearer '+tok}});
+ if(!r.ok)throw new Error('get '+r.status);return await r.json();
+}
+async function odPut(tok,body,etag){
+ const h={Authorization:'Bearer '+tok,'Content-Type':'application/json'};if(etag)h['If-Match']=etag;
+ const r=await fetch(GR+':/content',{method:'PUT',headers:h,body:JSON.stringify(body)});
+ if(r.status===412)return{conflict:true};if(!r.ok)throw new Error('put '+r.status);
+ const j=await r.json();return{eTag:j.eTag}
+}
+/* 3-way merge: keep every change made on this phone since the last sync, take everything else from OneDrive */
+function odMerge(R,L,B){
+ const out=Object.assign({},R);B=B||{};
+ Object.keys(L).forEach(k=>{if(k==='att')return;if(!B||stab(L[k])!==stab(B[k]))out[k]=L[k]});
+ const att=Object.assign({},R.att||{}),bA=B.att||{},lA=L.att||{};
+ Object.keys(lA).forEach(k=>{if(stab(lA[k])!==stab(bA[k]))att[k]=lA[k]});
+ Object.keys(bA).forEach(k=>{if(!lA[k])delete att[k]});
+ out.att=att;return out;
+}
+const odPayload=()=>({app:'iat-attendance',version:2,saved:new Date().toISOString(),data:DB});
+function odApply(nd){
+ if(stab(nd)===stab(DB))return false;
+ const meId=me&&me.id;DB=normDB(nd);
+ if(meId){me=DB.users.find(u=>u.id===meId)||null}
+ _save();return true;
+}
+async function odSync(manual){
+ if(!ODON||!odAcct)return;
+ if(odBusy){odAgain=true;return}
+ odBusy=true;odChip('Saving…');
+ try{
+  let tok;try{tok=await odToken(false)}catch(e){tok=await odToken(!!manual)}
+  let changed=false,done=false;
+  for(let i=0;i<3&&!done;i++){
+   const meta=await odMeta(tok);
+   if(!meta){const p=await odPut(tok,odPayload(),null);if(p.conflict)continue;odEtag=p.eTag;odBase=clone(DB);done=true;break}
+   if(meta.eTag!==odEtag){
+    const rem=await odGet(tok),R=normDB(rem.data);
+    const merged=odBase?odMerge(R,DB,odBase):R;
+    if(odApply(merged))changed=true;
+    odBase=clone(R);odEtag=meta.eTag;
+   }
+   if(stab(DB)!==stab(odBase)){
+    const p=await odPut(tok,odPayload(),meta.eTag);
+    if(p.conflict){odEtag=null;continue}
+    odEtag=p.eTag;odBase=clone(DB);
+   }
+   done=true;
+  }
+  if(!done)throw new Error('conflict');
+  odChip('Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  if(changed){if(me===null&&!isLoginScreen())logout();const a=document.activeElement;if(!(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))render()}
+ }catch(e){console.error(e);odChip(navigator.onLine===false?'Offline — will retry':'Sync problem — will retry',true)}
+ odBusy=false;
+ if(odAgain){odAgain=false;odSched(500)}
+}
+const isLoginScreen=()=>!!(document.querySelector&&document.querySelector('#login'));
+function odSched(ms){clearTimeout(odTimer);odTimer=setTimeout(()=>odSync(),ms||2500)}
+save=function(){_save();if(ODON&&odAcct)odSched()};
+async function odConnect(){
+ if(!odApp)return toast('OneDrive library not loaded — open the GitHub link with internet');
+ try{
+  const r=await odApp.loginPopup({scopes:['Files.ReadWrite']});odAcct=r.account;odApp.setActiveAccount(odAcct);
+  odBase=null;odEtag=null;await odSync(true);
+  if(me&&!DB.users.find(u=>u.id===me.id))me=null;
+  render();
+ }catch(e){console.error(e);toast('OneDrive sign-in was cancelled or blocked')}
+}
+function odDisconnect(){if(!confirm('Disconnect OneDrive on this phone? Data stays on the phone.'))return;try{odApp.logoutPopup({account:odAcct})}catch(e){}odAcct=null;odEtag=null;odBase=null;odChip('Not connected',true);render()}
+function odInit(){
+ if(!ODON)return;
+ const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+ s.onload=()=>{
+  try{
+   odApp=new msal.PublicClientApplication({auth:{clientId:OD.clientId,authority:OD.authority,redirectUri:location.origin+location.pathname},cache:{cacheLocation:'localStorage'}});
+   odAcct=odApp.getAllAccounts()[0]||null;
+   if(odAcct){odApp.setActiveAccount(odAcct);odSync().then(()=>{if(me===null)renderLogin()});setInterval(()=>{if(document.visibilityState!=='hidden')odSync()},OD.pollMs);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')odSync()})}
+   else{odChip('Not connected — tap to connect',true)}
+   if(me===null)renderLogin();
+  }catch(e){console.error(e);odChip('OneDrive unavailable here (needs the https link)',true)}
+ };
+ s.onerror=()=>odChip('OneDrive library not loaded',true);
+ document.head.appendChild(s);
+ window.addEventListener('online',()=>odSync());
+}
+renderLogin=function(){
+ _renderLogin();
+ if(!ODON)return;
+ const b=document.querySelector('#login');if(!b)return;
+ const d=document.createElement('div');d.className='row';d.style.marginTop='8px';
+ d.innerHTML=odAcct?`<span class="leg" style="margin:0">☁ OneDrive: ${esc(odAcct.username||'connected')}</span>`:`<button class="b grn" onclick="odConnect()">Connect OneDrive first</button><span class="leg" style="margin:0">Needed once on a new phone, to load users and workers.</span>`;
+ b.appendChild(d);
+};
+/* ----- JSON file backup (manual copy; works from any phone, even without sync) ----- */
+function backupObj(){return odPayload()}
+async function jsonSave(){
+ if(!isAdmin())return toast('Manager only');
+ const name=`iat-attendance-backup-${todayS()}.json`,blob=new Blob([JSON.stringify(backupObj(),null,1)],{type:'application/json'});
+ try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
+ dl(blob,name);toast('Saved '+name);
+}
+async function jsonLoad(f){
+ if(!isAdmin())return toast('Manager only');if(!f)return;
+ try{
+  const x=JSON.parse(await f.text());const d=x&&x.data;if(!d||!Array.isArray(d.workers)||!d.att)return toast('Not a backup file from this app');
+  if(!confirm(`Replace ALL current data with this backup (${d.workers.length} workers, saved ${String(x.saved||'').slice(0,10)})?`))return;
+  const meId=me.id;DB=normDB(d);me=DB.users.find(u=>u.id===meId)||DB.users[0];
+  save();toast('Backup loaded');render();
+ }catch(e){toast('Could not read that file')}
+}
+vSet=function(){
+ _vSet();
+ const bk=[...document.querySelectorAll('#v .card')].find(c=>c.querySelector('h3')&&/^Backup/.test(c.querySelector('h3').textContent));
+ if(!bk)return;
+ const r=document.createElement('div');r.className='row';
+ r.innerHTML=(ODON?(odAcct?`<span class="leg" style="margin:0">☁ OneDrive: ${esc(odAcct.username||'connected')} · file IAT-Attendance/attendance.json</span><button class="b" onclick="odSync(true)">Sync now</button><button class="b sec" onclick="odDisconnect()">Disconnect</button>`:`<button class="b grn" onclick="odConnect()">Connect OneDrive</button>`):`<span class="leg" style="margin:0">OneDrive sync is off: put the Azure client ID in the file (see the setup note).</span>`)
+  +`<button class="b grn" onclick="jsonSave()">Save backup (JSON)</button><label class="b sec" style="cursor:pointer">Load backup (JSON)<input type="file" accept=".json,application/json" hidden onchange="jsonLoad(this.files[0]);this.value=''"></label>`;
+ bk.insertBefore(r,bk.children[1]||null);
+};
+
+render();odInit();
+</script>
+</body>
+</html>
