@@ -139,6 +139,10 @@ input,select{padding:5px 7px}button.b{padding:6px 11px}.leg{margin-top:4px}.warn
 .cards.one .k{padding:3px 0!important;border-radius:7px}.cards.one .k b{font-size:16px!important;line-height:1.1}.cards.one .k span{font-size:9.5px;white-space:nowrap}
 .fl{gap:5px!important}.fl>label{gap:2px!important}.rc{padding:4px 6px!important;margin-bottom:4px!important}.rr{margin:2px 0!important;gap:6px!important}
 .card table:not(.g) th,.card table:not(.g) td{padding:3px 5px}
+.g3{display:grid;gap:4px;align-items:center;margin-bottom:3px}.g3 input,.g3 select{width:100%;min-width:0;padding:5px 6px}
+.sh3{grid-template-columns:minmax(0,1fr) 96px 78px}.us3{grid-template-columns:minmax(0,1fr) 62px 98px 34px}.us3 .b{padding:5px 0}
+.sh3 input[type=time]::-webkit-calendar-picker-indicator{display:none}
+label.b{display:inline-block;background:var(--pri);color:#fff;border-radius:7px;padding:6px 11px;cursor:pointer}label.b.sec{background:#e9eef4;color:var(--tx)}
 </style>
 </head>
 <body>
@@ -835,11 +839,11 @@ function vSet(){
  <label>Max people off on the same day, all types (0 = automatic, spreads evenly)<input type="number" min="0" style="width:90px" value="${DB.maxOffDay}" onchange="DB.maxOffDay=Number(this.value);save()"></label>
  <label>Minimum days between one worker's days off<input type="number" min="0" style="width:90px" value="${DB.minGap}" onchange="DB.minGap=Number(this.value);save()"></label>
  <label>Driver leaves with an order: hours added to his shift<input type="number" min="0" step="0.25" style="width:90px" value="${DB.orderHrs}" onchange="DB.orderHrs=Number(this.value);save()"></label></div></div>
- <div class="card"><h3>Shifts (12 hours each)</h3><div class="tw"><table><tr><th>Name</th><th>Start</th><th>Period</th></tr>
- ${DB.shifts.map((s,i)=>`<tr><td><input value="${esc(s.name)}" onchange="DB.shifts[${i}].name=this.value;save()"></td><td><input type="time" value="${s.start}" onchange="DB.shifts[${i}].start=this.value;save()"></td><td><select onchange="DB.shifts[${i}].group=this.value;save()"><option value="day" ${s.group==='day'?'selected':''}>Day</option><option value="night" ${s.group==='night'?'selected':''}>Night</option></select></td></tr>`).join('')}</table></div></div>
- <div class="card"><h3>Users</h3><div class="tw"><table><tr><th>Name</th><th>PIN</th><th>Access</th><th></th></tr>
- ${DB.users.map((u,i)=>`<tr><td><input value="${esc(u.name)}" onchange="DB.users[${i}].name=this.value;save()"></td><td><input value="${esc(u.pin)}" style="width:90px" onchange="DB.users[${i}].pin=this.value;save()"></td><td><select onchange="DB.users[${i}].role=this.value;save()"><option value="admin" ${u.role==='admin'?'selected':''}>Manager</option><option value="sup" ${u.role!=='admin'?'selected':''}>Supervisor</option></select></td><td><button class="b sm red" onclick="delUser(${i})">Delete</button></td></tr>`).join('')}</table></div>
- <div class="row" style="margin-top:8px"><button class="b sec" onclick="addUser()">+ Add user</button></div>
+ <div class="card"><h3>Shifts (12 hours each)</h3>
+ ${DB.shifts.map((s,i)=>`<div class="g3 sh3"><input value="${esc(s.name)}" onchange="DB.shifts[${i}].name=this.value;save()"><input type="time" value="${s.start}" onchange="DB.shifts[${i}].start=this.value;save()"><select onchange="DB.shifts[${i}].group=this.value;save()"><option value="day" ${s.group==='day'?'selected':''}>Day</option><option value="night" ${s.group==='night'?'selected':''}>Night</option></select></div>`).join('')}</div>
+ <div class="card"><h3>Users</h3>
+ ${DB.users.map((u,i)=>`<div class="g3 us3"><input value="${esc(u.name)}" placeholder="Name" onchange="DB.users[${i}].name=this.value;save()"><input value="${esc(u.pin)}" placeholder="PIN" onchange="DB.users[${i}].pin=this.value;save()"><select onchange="DB.users[${i}].role=this.value;save()"><option value="admin" ${u.role==='admin'?'selected':''}>Manager</option><option value="sup" ${u.role!=='admin'?'selected':''}>Supervisor</option></select><button class="b sm red" onclick="delUser(${i})">✕</button></div>`).join('')}
+ <div class="row" style="margin-top:4px"><button class="b sec" onclick="addUser()">+ Add user</button></div>
  <div class="leg">Supervisors can mark attendance and view the planner and report (without wages or deductions). Change the PINs here: they sync to the other phones through OneDrive. The PIN only controls what each person sees in the app — it is not real security, so connect OneDrive only on phones you trust.</div></div>
  <div class="card"><h3>Backup and import</h3><div class="row"><button class="b" onclick="exportAll()">Export all data (Excel backup)</button>
  <label class="b sec" style="cursor:pointer">Restore backup<input type="file" accept=".xlsx" hidden onchange="importBackup(this.files[0])"></label></div>
@@ -890,7 +894,7 @@ async function importOld(f){
 /* ================= ONEDRIVE SYNC (Microsoft Graph) + JSON backup =================
    Put your Azure "Application (client) ID" below. Empty = local-only mode.
    The whole app data is kept in ONE JSON file on OneDrive: IAT-Attendance/attendance.json */
-const OD={clientId:"",authority:"https://login.microsoftonline.com/common",path:"IAT-Attendance/attendance.json",pollMs:45000};
+const OD={clientId:"357c1d59-917c-4eb3-92e9-43c0e7dd4f07",authority:"https://login.microsoftonline.com/common",path:"IAT-Attendance/attendance.json",pollMs:45000};
 const ODON=!!OD.clientId;
 const _renderLogin=renderLogin,_logout=logout,_vSet=vSet,_save=save;
 const stab=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
