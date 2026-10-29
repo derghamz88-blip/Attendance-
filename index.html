@@ -15,8 +15,8 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-ser
 header{background:var(--pri);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{font-size:17px;margin:0;flex:1}
 header button{background:#ffffff26;border:0;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer}
-nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
-nav button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:14px;color:var(--mut)}
+nav{display:flex;flex-wrap:wrap;gap:3px;padding:8px 10px;overflow-x:hidden;background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+nav button{flex:1 1 auto;border:0;background:none;padding:8px 8px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:14px;color:var(--mut)}
 nav button.on{background:var(--pri);color:#fff}
 main{padding:6px;max-width:none;margin:0}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;margin-bottom:8px}
@@ -35,13 +35,15 @@ th{background:#eef2f6;font-weight:600}
 td.l,th.l{text-align:left}
 .tw{overflow-x:auto}
 /* monthly sheet: dates down the left, workers across the top, fits the screen */
-.gw{overflow-x:auto;border:1px solid var(--bd);border-radius:8px}
+.gw{overflow:visible;border:1px solid var(--bd);border-radius:8px}
 table.g{table-layout:fixed;width:100%}
 table.g th,table.g td{padding:1px 0;overflow:hidden;line-height:1.5}
 table.g th.dcol,table.g td.dcol{width:50px;text-align:left;padding:1px 4px;position:sticky;left:0;background:#fff;z-index:2;white-space:nowrap}
 table.g td.dcol.pr{background:#fde7c8}
 table.g td.dcol.ph{background:#e8e1f5}
 table.g th.oc,table.g td.oc{width:20px;background:#f8fafc}
+table.g thead th{position:sticky;top:var(--navh,44px);z-index:3}
+table.g thead th.dcol{z-index:5}
 table.g th.wn{height:104px;vertical-align:bottom;padding:2px 0;background:#eef2f6}
 table.g th.wn span{line-height:1.05;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;max-height:98px;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 table.g tr.tt td{background:#f8fafc;font-weight:700}
@@ -212,11 +214,12 @@ const grp=w=>shiftOf(w).group;
 const isSep=w=>!!roleOf(w).sep;
 const active=()=>DB.workers.filter(w=>w.active!==false);
 const key=(d,id)=>d+'|'+id;
+const isOff=x=>x==='H'||x==='P';
 function stOf(d,id,pl){const k=key(d,id);return (pl&&pl[k]&&pl[k].s)||(DB.att[k]&&DB.att[k].s)||(DB.pub[d]?'F':'N')}
 function monthDates(mo){const[y,m]=mo.split('-').map(Number);return Array.from({length:dim(y,m)},(_,i)=>fmt(y,m,i+1))}
 const quotaOf=w=>(w.quota===''||w.quota==null)?DB.quota:Number(w.quota);
 const countSt=(mo,id,st)=>monthDates(mo).filter(d=>stOf(d,id)===st).length;
-const offsOn=(d,pl)=>active().filter(w=>!isSep(w)&&stOf(d,w.id,pl)==='H');
+const offsOn=(d,pl)=>active().filter(w=>!isSep(w)&&isOff(stOf(d,w.id,pl)));
 /* ---------- rules ---------- */
 const prefOf=w=>{const r=roleOf(w);return (grp(w)==='night'?r.prefNight:r.prefDay)||[]};
 const prefTxt=a=>[1,2,3,4,5,6,0].filter(x=>a.includes(x)).map(x=>DN[x].slice(0,3)).join(', ');
@@ -245,7 +248,7 @@ function monthViolations(mo){
   if(DB.maxOffDay>0&&offs.length>DB.maxOffDay)out.push({d,t:`${offs.length} people off together (max ${DB.maxOffDay})`});
   offs.forEach(w=>{const sf=softFor(w,d);if(sf.length)out.push({d,t:`${w.name}: ${sf[0]}`,soft:true})});
  });
- active().filter(w=>!isSep(w)).forEach(w=>{const hs=monthDates(mo).filter(d=>stOf(d,w.id)==='H'),q=quotaOf(w);if(hs.length>q)out.push({d:hs[hs.length-1],t:`${w.name} has ${hs.length} days off this month (allowed ${q}) — tap one in the grid to remove it`})});
+ active().filter(w=>!isSep(w)).forEach(w=>{const hs=monthDates(mo).filter(d=>isOff(stOf(d,w.id))),q=quotaOf(w);if(hs.length>q)out.push({d:hs[hs.length-1],t:`${w.name} has ${hs.length} days off/approved this month (allowed ${q}) — tap one in the grid to remove it`})});
  return out;
 }
 function suggest(mo){
@@ -253,8 +256,8 @@ function suggest(mo){
  const staff=active().filter(w=>!isSep(w));
  const pr=w=>{const r=roleOf(w);return (r.strict&&prefOf(w).length?2:0)+(r.maxOff>0?1:0)};
  const t0=todayS(),trimmed=[];
- staff.forEach(w=>{const hs=dates.filter(d=>stOf(d,w.id)==='H');let ex=hs.length-quotaOf(w);for(let i=hs.length-1;i>=0&&ex>0;i--){if(hs[i]>t0){pl[key(hs[i],w.id)]={s:'N'};ex--;if(!trimmed.includes(w.name))trimmed.push(w.name)}}});
- const kept=(w)=>dates.filter(d=>stOf(d,w.id,pl)==='H').length;
+ staff.forEach(w=>{const hs=dates.filter(d=>isOff(stOf(d,w.id)));let ex=hs.length-quotaOf(w);for(let i=hs.length-1;i>=0&&ex>0;i--){if(hs[i]>t0&&stOf(hs[i],w.id)==='H'){pl[key(hs[i],w.id)]={s:'N'};ex--;if(!trimmed.includes(w.name))trimmed.push(w.name)}}});
+ const kept=(w)=>dates.filter(d=>isOff(stOf(d,w.id,pl))).length;
  const list=staff.map(w=>({w,need:quotaOf(w)-kept(w)})).filter(x=>x.need>0).sort((a,b)=>pr(b.w)-pr(a.w)||roleIdx(a.w)-roleIdx(b.w));
  const existing=staff.reduce((a,w)=>a+kept(w),0);
  const cap=DB.maxOffDay>0?DB.maxOffDay:Math.max(1,Math.ceil((existing+list.reduce((a,x)=>a+x.need,0))/n));
@@ -262,7 +265,7 @@ function suggest(mo){
  const PASSES=[{pref:1,cap:1,gap:1},{pref:0,cap:1,gap:1},{pref:0,cap:0,gap:1},{pref:0,cap:0,gap:0}];
  const pick=(w,target,o,gapMin)=>{
   const pref=prefOf(w),r=roleOf(w);let best=null,bs=1e9;
-  const own=[];dates.forEach((d,i)=>{if(stOf(d,w.id,pl)==='H')own.push(i)});
+  const own=[];dates.forEach((d,i)=>{if(isOff(stOf(d,w.id,pl)))own.push(i)});
   dates.forEach((d,i)=>{
    if(stOf(d,w.id,pl)!=='N')return;
    if(violationFor(w,d,pl).length)return;
@@ -298,7 +301,7 @@ const snap=()=>({y:window.scrollY,c:[...document.querySelectorAll('#v .gw,#v .tw
 function restore(sc){window.scrollTo(0,sc.y);document.querySelectorAll('#v .gw,#v .tw').forEach((e,i)=>{if(sc.c[i]){e.scrollLeft=sc.c[i][0];e.scrollTop=sc.c[i][1]}})}
 function render(){
  if(!me){shellKey='';return renderLogin()}
- const tabs=[['today','Today'],['drv','Drivers'],['month','Monthly sheet'],['plan','Days-off planner'],['rep','Report']];
+ const tabs=[['today','Today'],['drv','Drivers'],['month','Monthly sheet'],['dmon','Drivers sheet'],['plan','Days-off planner'],['rep','Report']];
  if(isAdmin())tabs.push(['set','Settings']);
  if(!tabs.find(t=>t[0]===tab))tab='today';
  const sk=me.id+'|'+me.name+'|'+isAdmin();
@@ -310,9 +313,11 @@ function render(){
   shellKey=sk;
  }
  document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('on',tabs[i][0]===tab));
- ({today:vToday,drv:vDrv,month:vMonth,plan:vPlan,rep:vRep,set:vSet})[tab]();
- lastTab=tab;restore(sc);
+ ({today:vToday,drv:vDrv,dmon:()=>{$('#v').innerHTML=drvMonthView()},month:vMonth,plan:vPlan,rep:vRep,set:vSet})[tab]();
+ lastTab=tab;restore(sc);setNavH();
 }
+function setNavH(){const n=document.querySelector('nav');if(n)document.documentElement.style.setProperty('--navh',n.offsetHeight+'px')}
+window.addEventListener('resize',setNavH);
 function go(t){tab=t;mv=null;render()}
 function keepScroll(f){const y=window.scrollY;f();window.scrollTo(0,y)}
 function renderLogin(){
@@ -447,9 +452,36 @@ function drvReportCard(){
  ${det.length?`<div class="tw" style="margin-top:5px"><table><tr><th class="l">Date</th><th class="l">Driver</th><th>Arrived</th><th>Left</th><th>Order</th><th>Hours</th></tr>${det.map(e=>`<tr><td class="l">${dm(e.d)} ${DN[dow(e.d)].slice(0,3)}</td><td class="l">${esc(e.n)}</td><td>${e.in}</td><td>${e.out}</td><td>${e.o?'📦':''}</td><td><b>${e.h==null?'':e.h}</b></td></tr>`).join('')}</table></div>`:''}</div>`;
 }
 /* ---------- drivers page ---------- */
+let drvView='day';
+function drvMonthView(){
+ const dr=fWorkers('sep'),[y,m]=mon.split('-').map(Number),last=fmt(y,m,dim(y,m)),t=todayS(),dflt=t>=mon+'-01'&&t<=last?t:last;
+ let h=`<div class="row noprint"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="b" onclick="monthPDF('att','sep')">PDF</button><button class="b sec" onclick="monthXLSX('att','sep')">Excel</button></div>`;
+ if(!dr.length)return h+`<div class="warn">No drivers yet.</div>`;
+ h+=`<div class="card noprint"><h3>Fill many days at once</h3><div class="row"><select id="bkw"><option value="">All drivers</option>${dr.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select>
+ <select id="bks">${['W','L','H','A','P','N'].map(k=>`<option value="${k}">${k==='N'?'Clear':ST[k].l}</option>`).join('')}</select></div>
+ <div class="row"><span>From</span><input type="date" id="bkf" value="${mon}-01" min="${mon}-01" max="${last}"><span>to</span><input type="date" id="bkt" value="${dflt}" min="${mon}-01" max="${last}"></div>
+ <div class="row"><label><input type="checkbox" id="bko" checked> Only days not marked yet</label><button class="b" onclick="drvBulk()">Apply</button></div>
+ <div class="leg">Example: All drivers → Present → 1st to today → Apply. Then tap a single cell to change one day. Arrival / leaving times are kept.</div></div>`;
+ h+=`<div class="card">${gridHTML(mon,null,true,'sep')}</div>`;
+ return h;
+}
+function drvBulk(){
+ const w=$('#bkw').value,st=$('#bks').value,f=$('#bkf').value,t=$('#bkt').value,only=$('#bko').checked;
+ if(!f||!t||f>t)return toast('Check the dates');
+ const ids=(w?[w]:fWorkers('sep').map(x=>x.id));let n=0;
+ monthDates(mon).filter(d=>d>=f&&d<=t).forEach(d=>ids.forEach(id=>{
+  const k=key(d,id),prev=DB.att[k]||{};
+  if(only&&stOf(d,id)!=='N')return;
+  if(st==='N'){if(prev.in||prev.out||prev.o||prev.n){const o={...prev};delete o.s;if(o.in||o.out||o.o||o.n){o.s='N';DB.att[k]=o}else delete DB.att[k]}else delete DB.att[k]}
+  else DB.att[k]={...prev,s:st};
+  n++;
+ }));
+ save();render();toast(`${n} day${n===1?'':'s'} updated`);
+}
 function vDrv(){
+ const tg='';
  const d=selDate,dr=fWorkers('sep');
- let h=`<div class="row"><input type="date" value="${d}" onchange="selDate=this.value;render()"><b>${DN[dow(d)].slice(0,3)}</b><button class="b sec sm" onclick="selDate=todayS();render()">Today</button><button class="b sm" onclick="drvAllPresent()">All present</button></div>`;
+ let h=tg+`<div class="row"><input type="date" value="${d}" onchange="selDate=this.value;render()"><b>${DN[dow(d)].slice(0,3)}</b><button class="b sec sm" onclick="selDate=todayS();render()">Today</button><button class="b sm" onclick="drvAllPresent()">All present</button></div>`;
  if(!dr.length)return $('#v').innerHTML=h+`<div class="warn">No drivers yet. ${isAdmin()?'Go to Settings and set a worker\'s type to Driver, or paste names in "Add many at once".':'Ask the manager to add them.'}</div>`;
  const tot=Math.round(dr.reduce((q,w)=>q+(drvHours(DB.att[key(d,w.id)])||0),0)*10)/10;
  dr.forEach(w=>{h+=drvRow(w,d)});
@@ -469,7 +501,7 @@ function gridHTML(mo,pl,edit,who){
   const dt=fmt(y,m,d),wd=dow(dt);let off=0;
   h+=`<tr><td class="dcol ${DB.pub[dt]?'ph':DB.pressureDays.includes(wd)?'pr':''}" title="${DB.pub[dt]?esc(DB.pub[dt]):''}"><b>${d}</b> ${DN[wd].slice(0,3)}</td>`;
   ws.forEach(w=>{
-   const st=stOf(dt,w.id,pl);tot[w.id][st]++;tot[w.id].hrs=Math.round((tot[w.id].hrs+(drvHours(DB.att[key(dt,w.id)])||0))*10)/10;if(st==='H')off++;
+   const st=stOf(dt,w.id,pl);tot[w.id][st]++;tot[w.id].hrs=Math.round((tot[w.id].hrs+(drvHours(DB.att[key(dt,w.id)])||0))*10)/10;if(st==='H'||st==='P')off++;
    const planned=pl&&pl[key(dt,w.id)]&&!DB.att[key(dt,w.id)],isMv=mv&&mv.d===dt&&mv.id===w.id;
    h+=`<td class="c ${st} ${planned?'pl':''} ${isMv?'mv':''}" ${st==='N'?`style="background:${tint(roleOf(w).color,.14)}"`:''} ${edit?`onpointerdown="lpStart('${dt}','${w.id}')" onpointerup="lpCancel()" onpointerleave="lpCancel()" onpointercancel="lpCancel()" oncontextmenu="return false" onclick="cellTap('${dt}','${w.id}')"`:''}>${dense&&st==='H'?'•':(who==='sep'&&drvHours(DB.att[key(dt,w.id)])!=null?drvHours(DB.att[key(dt,w.id)]):ST[st].c)}</td>`;
   });
@@ -491,7 +523,7 @@ function setOff(d,id,on){
 function lpCancel(){clearTimeout(lpTimer)}
 function lpStart(d,id){lpCancel();lpFired=false;lpTimer=setTimeout(()=>{if(stOf(d,id,plan)==='H'){mv={d,id};lpFired=true;try{if(navigator.vibrate)navigator.vibrate(40)}catch(e){}render()}},450)}
 function cancelMove(){mv=null;render()}
-const quotaWarn=(w,d,ov)=>{const mo=d.slice(0,7),q=quotaOf(w),h=monthDates(mo).filter(x=>stOf(x,w.id,ov)==='H').length;return h>=q?[`${w.name} already has ${h} day${h===1?'':'s'} off this month (allowed ${q}).`]:[]};
+const quotaWarn=(w,d,ov)=>{const mo=d.slice(0,7),q=quotaOf(w),h=monthDates(mo).filter(x=>isOff(stOf(x,w.id,ov))).length;return h>=q?[`${w.name} already has ${h} day${h===1?'':'s'} off/approved this month (allowed ${q}).`]:[]};
 const warnText=(w,d,ov)=>[...quotaWarn(w,d,ov),...violationFor(w,d,ov),...softFor(w,d)];
 function cellTap(d,id){
  if(lpFired){lpFired=false;return}
@@ -551,6 +583,13 @@ function saveCell(){
  save();closeM();render();
 }
 /* ---------- planner + public holidays ---------- */
+function balanceCard(){
+ const ds=monthDates(mon),t=todayS(),ws=active().filter(w=>!isSep(w));
+ const rows=ws.map(w=>{let tk=0,pn=0,ap=0;ds.forEach(d=>{const x=stOf(d,w.id,plan);if(x==='H'){if(d<=t)tk++;else pn++}else if(x==='P')ap++});const q=quotaOf(w);return{w,tk,pn,ap,q,left:q-tk-pn-ap}});
+ const need=rows.filter(r=>r.left>0).sort((a,b)=>b.left-a.left||roleIdx(a.w)-roleIdx(b.w)),done=rows.length-need.length;
+ const tot=need.reduce((a,r)=>a+r.left,0);
+ return `<div class="card"><h3>Days off still owed — ${mon}</h3>${need.length?`<div class="tw"><table><tr><th class="l">Worker</th><th class="l">Shift</th><th>Taken</th><th>Planned</th><th>Approved</th><th>Allowed</th><th>Left</th></tr>${need.map(r=>`<tr><td class="l" style="border-left:4px solid ${roleOf(r.w).color}"><b>${esc(r.w.name)}</b></td><td class="l">${esc(shiftOf(r.w).name)}</td><td>${r.tk||''}</td><td>${r.pn||''}</td><td>${r.ap||''}</td><td>${r.q}</td><td><b>${r.left}</b></td></tr>`).join('')}</table></div><div class="leg">${need.length} workers still owed days off (${tot} days in total). ${done} workers have finished their days off. Taken = days off up to today · Planned = upcoming days off · Approved absence counts as a day off.${plan?' Includes the suggested plan.':''}</div>`:'<div class="warn good">Everyone has taken all their days off ✓</div>'}</div>`;
+}
 function vPlan(){
  const v=monthViolations(mon);
  let h=monBar('plan')+mvBar();
@@ -566,6 +605,7 @@ function vPlan(){
   h+=`<div class="warn good" style="font-size:12px"><b>Edit the plan:</b> tap an empty cell to add a day off, tap a day off to remove it, or <b>press and hold a day off, then tap the new cell</b> (same worker or another) to move it. Then press Approve plan.</div>`;
  }
  h+=gridHTML(mon,plan,true,'main')+`</div>`;
+ h+=balanceCard();
  h+=`<div class="card"><h3>Rule problems this month</h3>${v.length?v.map(x=>`<div class="warn ${x.soft?'':'bad'}">${dm(x.d)} (${DN[dow(x.d)]}): ${esc(x.t)}</div>`).join(''):'<div class="warn good">No problems ✓</div>'}</div>`;
  const pubs=Object.keys(DB.pub).sort();
  h+=`<div class="card"><h3>Public holidays</h3>
@@ -686,10 +726,11 @@ function monthData(mo,mode,who){
   const codes=dates.map(d=>{let st=stOf(d,w.id,mode==='plan'?plan:null);if(mode==='plan'&&st!=='H'&&st!=='F')st='N';c[st]++;return st});
   const hl=dates.map(d=>who==='sep'&&mode!=='plan'?drvHours(DB.att[key(d,w.id)]):null),hrs=Math.round(hl.reduce((q,v)=>q+(v||0),0)*10)/10;
   const wage=Number(w.wage)||0;
-  return{w,codes,hl,hrs,c,wage,quota:quotaOf(w),ded:c.L*DB.lateFee+c.A*DB.absentDays*wage+c.P*DB.approvedDays*wage};
+  const ap=dates.filter(d=>stOf(d,w.id)==='P').length*(mode==='plan'?1:0);
+  return{w,codes,hl,hrs,c,ap,wage,quota:quotaOf(w),ded:c.L*DB.lateFee+c.A*DB.absentDays*wage+c.P*DB.approvedDays*wage};
  });
- const off=dates.map((d,i)=>cols.filter(x=>x.codes[i]==='H').length);
- const rowsT=mode==='plan'?[['Days off',x=>x.c.H],['Per month',x=>x.quota]]
+ const off=dates.map((d,i)=>cols.filter(x=>x.codes[i]==='H'||x.codes[i]==='P').length);
+ const rowsT=mode==='plan'?[['Days off',x=>x.c.H+x.ap],['Per month',x=>x.quota]]
   :[...(who==='sep'?[['Hours',x=>x.hrs]]:[]),['Present',x=>x.c.W+x.c.L],['Late',x=>x.c.L],['Absent',x=>x.c.A],['Approved',x=>x.c.P],['Day off',x=>x.c.H],['Public hol.',x=>x.c.F],['Not marked',x=>x.c.N],...(adm?[['Daily wage',x=>x.wage],['Deduction AED',x=>x.ded]]:[])];
  const base=mode==='plan'?'Days-off schedule':'Attendance sheet';
  return{mode,who,dates,cols,off,adm,rowsT,title:new Date(y,m-1,1).toLocaleString('en',{month:'long',year:'numeric'}),sub:who==='sep'?'Drivers - '+base.toLowerCase():base};
@@ -968,7 +1009,7 @@ async function odSync(manual){
   if(!done)throw new Error('conflict');
   odChip('Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
   if(changed){if(me===null&&!isLoginScreen())logout();const a=document.activeElement;if(!(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))render()}
- }catch(e){console.error(e);odChip(navigator.onLine===false?'Offline — will retry':'Sync problem — will retry',true)}
+ }catch(e){console.error(e);odChip(navigator.onLine===false?'Offline — will retry':'Sync problem ('+String((e&&(e.errorCode||e.message))||'?').slice(0,40)+') — tap to retry',true)}
  odBusy=false;
  if(odAgain){odAgain=false;odSched(500)}
 }
